@@ -371,43 +371,10 @@ describe('Meta objects', () => {
         expect(_a[0]).toBe(1)
         expect(_a[1]).toBe(MetaClsB)
 
-        // static cls MetaChildC
-
-        expect(MetaChildC.c).toBe(10)
-        expect(MetaChildC.c1).toBe(-5)
-        expect(MetaChildC.base).toBe(6)
-        expect(MetaChildC.toString()).toBe('c')
-        expect(MetaChildC.func()).toBe(MetaChildC)
-        expect(MetaChildC['_c']).toBe(MetaChildC)
-        MetaChildC._c = 1
-        expect(_c[0]).toBe(1)
-        expect(_c[1]).toBe(MetaChildC)
-
-        expect(MetaChildC.a).toBe(10)
-        expect(MetaChildC.a1).toBe(6)
-        expect(MetaChildC['_a']).toBe(MetaChildC)
-        MetaChildC._a = 1
-        expect(_a[0]).toBe(1)
-        expect(_a[1]).toBe(MetaChildC)
-
-        expect(Meta.serialize(MetaChildC)).toMatchObject({
-            base: 6,
-            c: 10,
-            c1: -5
-        })
-
-        expect(() => {
-            Meta.deserialize(MetaChildC, { c1: 100 })
-        }).toThrowError(MetaTypeValidationError)
-
-        expect(MetaChildC.c1).toBe(-5)
-        Meta.deserialize(MetaChildC, { c1: 20 })
-        expect(MetaChildC.c1).toBe(15)
-
         // static cls MetaClsC
 
         expect(MetaClsC.c).toBe(10)
-        expect(MetaClsC.c1).toBe(15)
+        expect(MetaClsC.c1).toBe(-5)
         expect(MetaClsC.base).toBe(6)
         expect(MetaClsC.toString()).toBe('c')
         expect(MetaClsC.func()).toBe(MetaClsC)
@@ -426,14 +393,14 @@ describe('Meta objects', () => {
         expect(Meta.serialize(MetaClsC)).toMatchObject({
             base: 6,
             c: 10,
-            c1: 15
+            c1: -5
         })
 
         expect(() => {
             Meta.deserialize(MetaClsC, { c1: 100 })
         }).toThrowError(MetaTypeValidationError)
 
-        expect(MetaClsC.c1).toBe(15)
+        expect(MetaClsC.c1).toBe(-5)
         Meta.deserialize(MetaClsC, { c1: 25 })
         expect(MetaClsC.c1).toBe(20)
 

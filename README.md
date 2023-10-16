@@ -65,7 +65,6 @@ More Facts:
     - [Serialization/Deserialization Methods](#serializationdeserialization-methods)
     - [Disable Serialization/Deserialization](#disable-serializationdeserialization)
   - [Json Schema](#json-schema)
-  - [Patch Built-in functions](#patch-built-in-functions)
   - [Errors](#errors)
     - [MetaTypeSerializationError](#metatypeserializationerror)
     - [MetaTypeValidationError](#metatypevalidationerror)
@@ -219,7 +218,7 @@ const metaObjA = Meta(objA)
 // will throw a validation error because this property has been initialized Number
 metaObjA['a'] = 'str' 
 
-const metaObjB = Meta({})
+const metaObjB = Meta()
 metaObjB['a'] = 'str'
 
 // will throw a validation error because this property has been initialized String
@@ -322,22 +321,17 @@ Object.setPrototypeOf(obj2, obj1)
 
 const metaObj2 = Meta(obj2)
 
+metaObj2['a'] = 'a' // validation error
+metaObj2['c'] = 'a' as any // validation error
+
 const metaObj3 = {
     e: NUMBER({ default: 1 })
 }
 
 Object.setPrototypeOf(metaObj3, metaObj2)
 
-metaObj2['a'] = 'a' // validation error
-metaObj2['b'] = 'a' // validation error
-metaObj3['b'] = 'a' // validation error
-
-// metaObj3 is not complete Meta object, it's a child Meta object
-// if your metaObj3 has its own properties, they will be ignored by meta logic
-// metaObj3['e'] equal to the NUMBER object, not 1
-
-console.log(metaObj3)
-// [meta object] { c: NUMBER = 2; d: STRING = null }
+console.log(metaObj3) // it is not Meta object
+// { e: NUMBER }
 ```
 
 > Meta object extends base obj: `Object.getPrototypeOf(metaObj2) === obj2`
@@ -372,13 +366,13 @@ const bInstance = new B()
 const cInstance = new C()
 
 console.log(A.toString())
-// [meta A] { a: NUMBER = null }
+// [meta class A] { a: NUMBER = null }
 
 console.log(B.toString())
-// [meta B] { b: NUMBER = null; [a]: NUMBER = null }
+// [class B extends Meta] { b = NUMBER }
 
 console.log(C.toString())
-// [meta C] { c: NUMBER = null; [a]: NUMBER = null; [b]: NUMBER = null }
+// [meta class C] { c: NUMBER = null; [a]: NUMBER = null; [b]: NUMBER = null }
 
 // brackets [a] mean that property a is a property of the parent class
 // there is no `base` property
@@ -402,9 +396,6 @@ console.log(cInstance.toString())
 > Unlike simple objects, instances have Meta properties of their parent classes.
 
 > Static classes work as simple Meta objects.
-
-> Class B is a child of a Meta class, but is fully functional, as opposed to a child of a Meta object.
-
 
 <br/>
 
@@ -1274,51 +1265,6 @@ Json-schema is no used in the project, and if you want to perform validation via
 
 <br/>
 
-### Patch Built-in functions
-
-By default, standard object methods will not work with Meta objects.
-For example: Object.keys(metaObj) will return only own properties (but not Meta object properties)
-
-```ts
-const obj1 = {
-    a: 1,
-    b: 2
-}
-
-const metaObj1 = Meta(obj1, { propertiesIgnore: ['b', 'c'] })
-
-metaObj1['c'] = 3
-
-// metaObj1.a - meta property
-// metaObj1.b - parent obj1 property
-// metaObj1.c - own property
-
-console.log(Object.keys(metaObj1))
-// ['c']
-```
-
-But you can patch the following built-ins:
-
-1. `Object.keys()`
-2. `Object.values()`
-3. `Object.entries()`
-4. `Object.getOwnPropertyNames()`
-5. `JSON.stringify()`
-
-```ts
-Meta.patchBuiltins()
-
-console.log(Object.keys(metaObj1))
-// ['a', 'c'] - there is no 'b' because this is not own property
-
-Meta.restoreBuiltins()
-```
-
-> for..in will not patched
-> Reflect.keys and similar methods also
-
-<br/>
-
 ### Errors
 
 > All project's errors extend `MetaError`
@@ -1406,6 +1352,5 @@ These libs are worth a look:
 4. implement property decorators (like in the typeorm).
 5. implement the logic of configuring MetaArgs of Meta class instances.
 6. implement Meta type default as a function.
-7. implement more popular validators and serializers
-8. implement property descriptors control logic (e.g. to use Object.freeze)
-9. rewrite docs
+7. implement more popular validators and serializers.
+8. rewrite docs.

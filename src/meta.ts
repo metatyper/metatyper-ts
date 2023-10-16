@@ -2,7 +2,6 @@ import { AnyImpl, MetaType, MetaTypeImpl, SchemaType } from './metatypes'
 import { isClass } from './utils/classes'
 
 export const IsMetaObjectSymbol = Symbol('[[IsMetaObject]]')
-export const IsMetaObjectChildSymbol = Symbol('[[IsMetaObjectChild]]')
 export const MetaObjectNameSymbol = Symbol('[[MetaObjectName]]')
 export const MetaObjectPropsIgnoreSymbol = Symbol('[[MetaObjectPropsIgnore]]')
 export const MetaObjectValidationIsActiveSymbol = Symbol('[[MetaObjectValidationIsActive]]')
@@ -24,37 +23,26 @@ export type MetaArgs = {
     disableSerialization?: boolean
 }
 
-export function initMetaObject(targetObject: object, origObj?: object) {
+export function isMetaObject(obj: object) {
+    return !!Reflect.getOwnPropertyDescriptor(obj, IsMetaObjectSymbol)?.value
+}
+
+function initMetaObject(targetObject: object, origObj: object) {
     if (!origObj) {
         origObj = targetObject
     }
 
-    const doSerialize = targetObject[MetaObjectSerializationIsActiveSymbol] || false
-
-    // obj is not a meta obj and not a child of a meta obj
-    if (!targetObject[IsMetaObjectSymbol]) {
+    // obj is not a meta obj
+    if (!isMetaObject(targetObject)) {
         return null
     }
 
-    // obj is a child (origObj was initiated from a parent proxy setter)
-    if (!Reflect.ownKeys(origObj).includes(IsMetaObjectSymbol)) {
-        Reflect.defineProperty(targetObject, IsMetaObjectChildSymbol, {
-            value: true,
-            writable: false,
-            configurable: false,
-            enumerable: false
-        })
-    }
+    const doSerialize = targetObject[MetaObjectSerializationIsActiveSymbol] || false
 
     const propsIgnore = targetObject[MetaObjectPropsIgnoreSymbol] || []
     const descriptors: Record<string, PropertyDescriptor> = {}
-    let declarations: Record<string, MetaTypeImpl> = {}
-    let values: Record<string, any> = {}
-
-    if (Reflect.ownKeys(origObj).includes(MetaObjectDeclarationSymbol)) {
-        declarations = origObj[MetaObjectDeclarationSymbol]
-        values = origObj[MetaObjectValuesSymbol]
-    }
+    const declarations: Record<string, MetaTypeImpl> = targetObject[MetaObjectDeclarationSymbol]
+    const values: Record<string, any> = targetObject[MetaObjectValuesSymbol]
 
     for (const propName of Reflect.ownKeys(origObj)) {
         if (typeof propName === 'string' && !propsIgnore?.includes(propName)) {
@@ -106,26 +94,10 @@ export function initMetaObject(targetObject: object, origObj?: object) {
                 Reflect.defineProperty(values, propName, descriptor)
             }
         )
-
-    Reflect.defineProperty(targetObject, MetaObjectDeclarationSymbol, {
-        value: declarations
-    })
-
-    Reflect.defineProperty(targetObject, MetaObjectValuesSymbol, {
-        value: values
-    })
-
-    return { declarations, values }
 }
 
-export function addDeclaration(obj: object, propName: string, propValue: any, rewrite = false) {
-    const descriptor = Reflect.getOwnPropertyDescriptor(obj, MetaObjectDeclarationSymbol)
-
-    let declarations = descriptor?.value
-
-    if (!declarations) {
-        declarations = initMetaObject(obj)?.declarations
-    }
+function addDeclaration(obj: object, propName: string, propValue: any, rewrite = false) {
+    const declarations = getMetaObjectDeclarations(obj)
 
     if (!declarations) {
         return null
@@ -140,26 +112,171 @@ export function addDeclaration(obj: object, propName: string, propValue: any, re
     return declarations[propName]
 }
 
-export function getMetaObjectOwnDeclarations(obj: object) {
+function getMetaObjectDeclarations(obj: object) {
     const descriptor = Reflect.getOwnPropertyDescriptor(obj, MetaObjectDeclarationSymbol)
 
-    return descriptor?.value || {}
+    return descriptor?.value || null
 }
 
-export function getMetaObjectDeclarations(obj: object) {
-    if (!obj) {
-        return null
+function getMetaObjectValues(obj: object) {
+    const descriptor = Reflect.getOwnPropertyDescriptor(obj, MetaObjectValuesSymbol)
+
+    return descriptor?.value ?? null
+}
+
+function getMetaObjectValue(obj: object, propName: string) {
+    let descriptor: PropertyDescriptor = null
+    let curObj = getMetaObjectValues(obj)
+
+    while (curObj && !descriptor && Reflect.getPrototypeOf(curObj)) {
+        descriptor = Reflect.getOwnPropertyDescriptor(curObj, propName)
+
+        if (curObj && !descriptor) curObj = Reflect.getPrototypeOf(curObj)
+    }
+
+    let value = undefined
+    let declaration = null
+
+    if (descriptor) {
+        if (descriptor.get) {
+            value = descriptor.get.call(obj)
+        } else {
+            value = descriptor.value
+        }
+
+        if (MetaType.isMetaType(value)) {
+            declaration = MetaType.getMetaImpl(value)
+
+            if (declaration) value = declaration?.default
+        }
+    }
+
+    const doSerialize = obj[MetaObjectSerializationIsActiveSymbol] || false
+
+    if (doSerialize) {
+        if (!declaration) {
+            const declarations = getMetaObjectDeclarations(obj)
+
+            if (declarations && declarations[propName]) {
+                declaration = declarations[propName]
+            }
+        }
+
+        if (declaration) {
+            return declaration.serialize(value, {
+                place: 'get',
+                propName,
+                targetObject: obj
+            })
+        }
+    }
+
+    return value
+}
+
+function setMetaObjectValue(obj: object, propName: string, propValue: any) {
+    if (propValue === undefined) {
+        propValue = null
+    }
+
+    const doValidate = obj[MetaObjectValidationIsActiveSymbol] || false
+    const doSerialize = obj[MetaObjectSerializationIsActiveSymbol] || false
+
+    const values = getMetaObjectValues(obj)
+
+    let curObj = values
+    let descriptor: PropertyDescriptor = null
+    let declaration: MetaTypeImpl = null
+
+    while (curObj && !descriptor && !declaration && Reflect.getPrototypeOf(curObj)) {
+        if (!declaration) {
+            const curObjDeclarations = getMetaObjectDeclarations(curObj)
+
+            if (curObjDeclarations) declaration = curObjDeclarations[propName]
+        }
+
+        if (!descriptor) {
+            descriptor = Reflect.getOwnPropertyDescriptor(curObj, propName)
+        }
+
+        if (!descriptor && !declaration) curObj = Reflect.getPrototypeOf(curObj)
+    }
+
+    if (descriptor && descriptor.set) {
+        descriptor.set.call(obj, propValue)
+
+        return true
+    }
+
+    if (!declaration) {
+        if (descriptor && descriptor.value !== undefined) {
+            declaration = MetaTypeImpl.getMetaTypeImpl(descriptor?.value)
+        } else {
+            declaration = MetaTypeImpl.getMetaTypeImpl(propValue) || AnyImpl.build()
+        }
+    }
+
+    if (MetaType.isMetaType(propValue)) {
+        propValue = MetaType.getMetaImpl(propValue)?.default ?? null
+    }
+
+    if (doSerialize) {
+        propValue = declaration.deserialize(propValue, {
+            place: 'set',
+            propName,
+            targetObject: obj
+        })
+    }
+
+    if (doValidate) {
+        declaration.validate(propValue, { propName, targetObject: obj })
+    }
+
+    try {
+        values[propName] = propValue
+    } catch (e) {
+        if (
+            e instanceof TypeError &&
+            e.message.startsWith('Cannot assign to read only property')
+        ) {
+            e.message = `TypeError: Cannot assign to read only property '${propName}' of object '${obj}'`
+        }
+
+        throw e
+    }
+
+    const hasNotOwnDeclaration = curObj !== obj
+
+    if (hasNotOwnDeclaration) {
+        addDeclaration(obj, propName, declaration)
+    }
+
+    return true
+}
+
+function metaObjectToString(obj: object) {
+    const name = obj[MetaObjectNameSymbol] || 'object'
+
+    if (!isMetaObject(obj)) {
+        const objOwnPropsStrings = Object.entries(obj)
+            .sort(([key1], [key2]) => key1.localeCompare(key2))
+            .map(([name, value]) => `${name} = ${value}`)
+
+        return `[${name} extends Meta] { ${objOwnPropsStrings.join('; ')} }`
     }
 
     const metaObjectsInheritedDeclarationsStack = []
 
-    while (obj && Reflect.getPrototypeOf(obj)) {
-        const descriptor = Reflect.getOwnPropertyDescriptor(obj, MetaObjectDeclarationSymbol)
+    let curObj = obj
 
-        if (descriptor && descriptor.value)
+    while (curObj && Reflect.getPrototypeOf(curObj)) {
+        const descriptor = Reflect.getOwnPropertyDescriptor(curObj, MetaObjectDeclarationSymbol)
+
+        if (descriptor && descriptor.value) {
             metaObjectsInheritedDeclarationsStack.push(descriptor.value)
+        }
 
-        obj = Reflect.getPrototypeOf(obj)
+        curObj = Reflect.getPrototypeOf(curObj)
     }
 
     const declarations = {}
@@ -182,186 +299,11 @@ export function getMetaObjectDeclarations(obj: object) {
         inheritedDeclarations[propName] = declarations[propName]
     })
 
-    return {
-        own: ownDeclarations,
-        inherited: inheritedDeclarations
-    }
-}
-
-export function getMetaObjectValues(obj: object) {
-    if (!obj) {
-        return null
-    }
-
-    let values = null
-    const valuesDescriptor = Reflect.getOwnPropertyDescriptor(obj, MetaObjectValuesSymbol)
-
-    if (valuesDescriptor) {
-        values = valuesDescriptor.value ?? null
-    }
-
-    if (!values) {
-        values = initMetaObject(obj)?.values || null
-    }
-
-    return values
-}
-
-export function getMetaObjectValue(obj: object, propName: string) {
-    let value = undefined
-    let declaration: MetaTypeImpl = undefined
-    let curObj = obj
-
-    const doSerialize = obj[MetaObjectSerializationIsActiveSymbol] || false
-
-    while (curObj && value === undefined && Reflect.getPrototypeOf(curObj)) {
-        const declarations = getMetaObjectOwnDeclarations(curObj)
-        const values = getMetaObjectValues(curObj)
-
-        declaration = declarations[propName]
-        value = values ? values[propName] : undefined
-
-        if (value === undefined) {
-            if (declaration) {
-                value = declaration?.default
-
-                curObj = null
-            } else {
-                const descriptor = Reflect.getOwnPropertyDescriptor(curObj, propName)
-
-                if (descriptor) {
-                    if (descriptor.get) {
-                        value = descriptor.get.call(obj)
-                    } else if (descriptor.value !== undefined) {
-                        value = descriptor.value
-                    }
-
-                    if (MetaType.isMetaType(value)) {
-                        declaration = MetaType.getMetaImpl(value)
-
-                        value = declaration?.default
-                    }
-                }
-            }
-        }
-
-        if (curObj) curObj = Reflect.getPrototypeOf(curObj)
-    }
-
-    if (doSerialize && declaration) {
-        value = declaration.serialize(value, {
-            place: 'get',
-            propName,
-            targetObject: obj
-        })
-    }
-
-    return value
-}
-
-export function setMetaObjectValue(obj: object, propName: string, propValue: any) {
-    if (propValue === undefined) {
-        propValue = null
-    }
-
-    const doValidate = obj[MetaObjectValidationIsActiveSymbol] || false
-    const doSerialize = obj[MetaObjectSerializationIsActiveSymbol] || false
-
-    const values = getMetaObjectValues(obj)
-
-    if (!values) {
-        return false
-    }
-
-    let curObj = obj
-    let descriptor: PropertyDescriptor
-
-    while (curObj && !descriptor && Reflect.getPrototypeOf(curObj)) {
-        const curObjValues = getMetaObjectValues(curObj)
-
-        if (curObjValues) {
-            descriptor = Object.getOwnPropertyDescriptor(curObjValues, propName)
-        }
-
-        if (!descriptor) {
-            descriptor = Object.getOwnPropertyDescriptor(curObj, propName)
-        }
-
-        if (!descriptor) {
-            curObj = Reflect.getPrototypeOf(curObj)
-        }
-    }
-
-    if (descriptor && descriptor.set) {
-        descriptor.set.call(obj, propValue)
-
-        return true
-    }
-
-    curObj = obj
-    let declaration: MetaTypeImpl
-
-    while (curObj && !declaration && Reflect.getPrototypeOf(curObj)) {
-        const curObjDeclarations = getMetaObjectOwnDeclarations(curObj)
-
-        declaration = curObjDeclarations[propName]
-
-        if (!declaration) curObj = Reflect.getPrototypeOf(curObj)
-    }
-
-    const hasNotOwnDeclaration = curObj !== obj && declaration
-
-    let metaTypeImpl: MetaTypeImpl
-
-    if (doValidate || doSerialize || !declaration) {
-        metaTypeImpl =
-            declaration ||
-            MetaTypeImpl.getMetaTypeImpl(descriptor?.value ?? propValue ?? null) ||
-            AnyImpl.build()
-    }
-
-    if (MetaType.isMetaType(propValue)) {
-        propValue = MetaType.getMetaImpl(propValue)?.default ?? null
-    }
-
-    if (doSerialize) {
-        propValue = metaTypeImpl.deserialize(propValue, {
-            place: 'set',
-            propName,
-            targetObject: obj
-        })
-    }
-
-    if (doValidate) {
-        metaTypeImpl.validate(propValue, { propName, targetObject: obj })
-    }
-
-    if (descriptor && !Reflect.getOwnPropertyDescriptor(values, propName))
-        Object.defineProperty(values, propName, { ...descriptor, value: undefined })
-
-    values[propName] = propValue
-
-    // This obj don't has own declaration (there is parent declaration or none)
-    if (hasNotOwnDeclaration) {
-        addDeclaration(obj, propName, declaration)
-    }
-
-    if (!declaration) {
-        addDeclaration(obj, propName, metaTypeImpl)
-    }
-
-    return true
-}
-
-function metaObjectToString(obj: object) {
-    const name = obj[MetaObjectNameSymbol] || 'object'
-    const declarations = getMetaObjectDeclarations(obj)
-
-    const objOwnDeclarationStrings = Object.entries(declarations.own)
+    const objOwnDeclarationStrings = Object.entries(ownDeclarations)
         .sort(([key1], [key2]) => key1.localeCompare(key2))
         .map(([name, value]) => `${name}: ${value} = ${obj[name]}`)
 
-    const objInheritedDeclarationStrings = Object.entries(declarations.inherited).map(
+    const objInheritedDeclarationStrings = Object.entries(inheritedDeclarations).map(
         ([name, value]) => `[${name}]: ${value} = ${obj[name]}`
     )
 
@@ -403,13 +345,15 @@ export function Meta<T extends object>(base?: T, args?: MetaArgs): T {
         base = {} as T
     }
 
-    const propsIgnore = [...(args?.propsIgnore || [])]
-
-    propsIgnore.push(
+    const propsIgnore = [
+        ...(args?.propsIgnore || []),
         ...[
             'name',
             'length',
             'toString',
+            'toLocaleString',
+            'propertyIsEnumerable',
+            'valueOf',
             'prototype',
             'apply',
             'call',
@@ -418,7 +362,7 @@ export function Meta<T extends object>(base?: T, args?: MetaArgs): T {
             'caller',
             'constructor'
         ]
-    )
+    ]
 
     let newObj: any
 
@@ -442,6 +386,13 @@ export function Meta<T extends object>(base?: T, args?: MetaArgs): T {
                     return instance
                 }
             }
+
+            Object.defineProperty(newObj, MetaObjectNameSymbol, {
+                get() {
+                    return 'class ' + this['name']
+                },
+                configurable: true
+            })
         } else {
             newObj = ((origFunc) => {
                 function metaFunc(...args: any[]) {
@@ -474,19 +425,19 @@ export function Meta<T extends object>(base?: T, args?: MetaArgs): T {
 
                 return metaFunc
             })(base)
+
+            Object.defineProperty(newObj, MetaObjectNameSymbol, {
+                get() {
+                    return 'function ' + this['name']
+                },
+                configurable: true
+            })
         }
 
         Object.defineProperty(newObj, 'name', {
             value: base['name'],
             configurable: true,
             writable: true
-        })
-
-        Object.defineProperty(newObj, MetaObjectNameSymbol, {
-            get() {
-                return this['name']
-            },
-            configurable: true
         })
     } else {
         newObj = {}
@@ -501,6 +452,14 @@ export function Meta<T extends object>(base?: T, args?: MetaArgs): T {
         writable: true
     })
 
+    Object.defineProperty(newObj, MetaObjectDeclarationSymbol, {
+        value: {}
+    })
+
+    Object.defineProperty(newObj, MetaObjectValuesSymbol, {
+        value: newObj
+    })
+
     Object.defineProperty(newObj, MetaObjectValidationIsActiveSymbol, {
         value: !args?.disableValidation,
         writable: true
@@ -511,47 +470,55 @@ export function Meta<T extends object>(base?: T, args?: MetaArgs): T {
         writable: true
     })
 
-    function toString() {
-        return metaObjectToString(this)
-    }
-
-    Reflect.defineProperty(newObj, Symbol.for('nodejs.util.inspect.custom'), {
-        value: toString,
-        writable: true
-    })
-
     initMetaObject(newObj, base)
 
     if (base) Object.setPrototypeOf(newObj, base)
 
     return new Proxy(newObj, {
         get(target, propName, receiver) {
-            if (propName === 'toString') {
+            if (
+                propName === 'toString' ||
+                propName === (Symbol.for('nodejs.util.inspect.custom') as any)
+            ) {
                 const value = Reflect.get(target, propName, receiver)
 
-                // will replace default toString
+                // will replace default toString only
                 if (Object.toString === value || Object.prototype.toString === value) {
-                    return toString.bind(receiver)
+                    return function toString() {
+                        return metaObjectToString(receiver)
+                    }
                 }
 
                 return value
             }
 
-            if (typeof propName === 'symbol' || propsIgnore.includes(propName)) {
+            if (
+                typeof propName === 'symbol' ||
+                propsIgnore.includes(propName) ||
+                !isMetaObject(receiver)
+            ) {
                 return Reflect.get(target, propName, receiver)
             }
 
             return getMetaObjectValue(receiver, propName)
         },
         set(target, propName, propValue, receiver) {
-            if (typeof propName === 'symbol' || propsIgnore.includes(propName)) {
+            if (
+                typeof propName === 'symbol' ||
+                propsIgnore.includes(propName) ||
+                !isMetaObject(receiver)
+            ) {
                 return Reflect.set(target, propName, propValue, receiver)
             }
 
             return setMetaObjectValue(receiver, propName, propValue)
         },
         defineProperty(target, propName, descriptor) {
-            if (typeof propName === 'symbol' || propsIgnore.includes(propName)) {
+            if (
+                typeof propName === 'symbol' ||
+                propsIgnore.includes(propName) ||
+                !isMetaObject(target)
+            ) {
                 return Reflect.defineProperty(target, propName, descriptor)
             }
 
@@ -566,17 +533,58 @@ export function Meta<T extends object>(base?: T, args?: MetaArgs): T {
             return result
         },
         deleteProperty(target, propName) {
-            if (typeof propName === 'symbol' || propsIgnore.includes(propName)) {
+            if (
+                typeof propName === 'symbol' ||
+                propsIgnore.includes(propName) ||
+                !isMetaObject(target)
+            ) {
                 return Reflect.deleteProperty(target, propName)
             }
 
-            const declarations = getMetaObjectOwnDeclarations(target)
+            const declarations = getMetaObjectDeclarations(target)
             const values = getMetaObjectValues(target)
 
             Reflect.deleteProperty(declarations, propName)
             Reflect.deleteProperty(values, propName)
 
             return true
+        },
+        has(target, propName) {
+            if (
+                typeof propName === 'symbol' ||
+                propsIgnore.includes(propName) ||
+                !isMetaObject(target)
+            ) {
+                return Reflect.has(target, propName)
+            }
+
+            return (
+                Reflect.has(newObj, propName) ||
+                Reflect.has(getMetaObjectDeclarations(target), propName)
+            )
+        },
+        ownKeys(target) {
+            if (!isMetaObject(target)) {
+                return Reflect.ownKeys(target)
+            }
+
+            const keys = Reflect.ownKeys(newObj)
+
+            return [...new Set([...keys, ...Reflect.ownKeys(getMetaObjectDeclarations(target))])]
+        },
+        getOwnPropertyDescriptor(target, propName) {
+            if (
+                typeof propName === 'symbol' ||
+                propsIgnore.includes(propName) ||
+                !isMetaObject(target)
+            ) {
+                return Reflect.getOwnPropertyDescriptor(target, propName)
+            }
+
+            return (
+                Reflect.getOwnPropertyDescriptor(newObj, propName) ||
+                Reflect.getOwnPropertyDescriptor(getMetaObjectValues(target), propName)
+            )
         }
     })
 }
@@ -612,7 +620,7 @@ Meta.enableSerializers = (obj: object) => {
 }
 
 Meta.validate = (obj: object, raw: object) => {
-    const objDeclarations = getMetaObjectOwnDeclarations(obj)
+    const objDeclarations = getMetaObjectDeclarations(obj)
 
     Object.entries<MetaTypeImpl>(objDeclarations).forEach(([propName, metaTypeImpl]) => {
         const value = raw[propName]
@@ -624,7 +632,7 @@ Meta.validate = (obj: object, raw: object) => {
 }
 
 Meta.serialize = (obj: object) => {
-    const objDeclarations = getMetaObjectOwnDeclarations(obj)
+    const objDeclarations = getMetaObjectDeclarations(obj)
     const values = getMetaObjectValues(obj)
 
     const raw = {}
@@ -645,7 +653,7 @@ Meta.serialize = (obj: object) => {
 Meta.deserialize = (obj: object, raw: object) => {
     const doValidate = obj[MetaObjectValidationIsActiveSymbol] || false
     const doSerialize = obj[MetaObjectSerializationIsActiveSymbol] || false
-    const objDeclarations = getMetaObjectOwnDeclarations(obj)
+    const objDeclarations = getMetaObjectDeclarations(obj)
 
     const _obj = {}
 
@@ -689,7 +697,7 @@ Meta.deserialize = (obj: object, raw: object) => {
 
 Meta.getJsonSchema = (obj: object, override?: Record<string, any>) => {
     const schemaProps = {}
-    const objDeclarations = getMetaObjectOwnDeclarations(obj)
+    const objDeclarations = getMetaObjectDeclarations(obj)
 
     Object.entries<MetaTypeImpl>(objDeclarations).forEach(([propName, declaration]) => {
         schemaProps[propName] = declaration.schema
@@ -703,82 +711,4 @@ Meta.getJsonSchema = (obj: object, override?: Record<string, any>) => {
         type: 'object',
         properties: schemaProps
     } as SchemaType
-}
-
-const origKeys = Object['keys']
-const origValues = Object['values']
-const origEntries = Object['entries']
-const origGetOwnPropertyNames = Object['getOwnPropertyNames']
-const origJSONStringify = JSON['stringify']
-
-let _patched = false
-
-Meta.restoreBuiltins = function restoreBuiltins() {
-    if (_patched) {
-        Object['keys'] = origKeys
-        Object['values'] = origValues
-        Object['entries'] = origEntries
-        Object['getOwnPropertyNames'] = origGetOwnPropertyNames
-        JSON['stringify'] = origJSONStringify
-
-        _patched = false
-    }
-}
-
-Meta.patchBuiltins = function patchBuiltins() {
-    if (_patched) return
-
-    _patched = true
-
-    Object['keys'] = function keys(o: object): string[] {
-        const metaValues = o[MetaObjectValuesSymbol]
-
-        if (metaValues) {
-            return origKeys(metaValues)
-        } else {
-            return origKeys(o)
-        }
-    }
-
-    Object['values'] = function values(o: object): any[] {
-        const metaValues = o[MetaObjectValuesSymbol]
-
-        if (metaValues) {
-            return origValues(metaValues)
-        } else {
-            return origValues(o)
-        }
-    }
-
-    Object['entries'] = function entries(o: object): [string, any][] {
-        const metaValues = o[MetaObjectValuesSymbol]
-
-        if (metaValues) {
-            return origEntries(metaValues)
-        } else {
-            return origEntries(o)
-        }
-    }
-
-    Object['getOwnPropertyNames'] = function getOwnPropertyNames(o: object): string[] {
-        const metaValues = o[MetaObjectValuesSymbol]
-
-        if (metaValues) {
-            return [
-                ...new Set([...origGetOwnPropertyNames(o), ...origGetOwnPropertyNames(metaValues)])
-            ]
-        } else {
-            return origGetOwnPropertyNames(o)
-        }
-    }
-
-    JSON['stringify'] = function stringify(value: any, ...args: any[]): string {
-        const metaValues = value[MetaObjectValuesSymbol]
-
-        if (metaValues) {
-            return origJSONStringify(metaValues, ...args)
-        } else {
-            return origJSONStringify(value, ...args)
-        }
-    }
 }

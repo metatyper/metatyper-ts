@@ -23,5 +23,5 @@
         "stripInternal": true
     },
     "exclude": ["lib", "node_modules"],
-    "include": ["src", "test", "src/test.ts"]
+    "include": ["src", "test"]
 }
