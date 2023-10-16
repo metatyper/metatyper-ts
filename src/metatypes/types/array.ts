@@ -29,11 +29,11 @@ export class ArrayImpl extends MetaTypeImpl {
             } else {
                 subType = ANY()
             }
+        } else {
+            subType = MetaTypeImpl.getMetaType(subType)
         }
 
-        if (!subType) subType = ANY()
-
-        this.subType = MetaType.getMetaImpl(subType)
+        this.subType = MetaType.getMetaImpl(subType) || ANY()
         this.validators = validators
         this.schema = {
             type: 'array',
