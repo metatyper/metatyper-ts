@@ -44,12 +44,24 @@ export class ExactArrayImpl extends MetaTypeImpl {
         )
     }
 
-    castToType({ value }) {
-        return (value as any[]).map((item, i) => this._typesImpl[i].castToType(item))
+    castToType({ value, ...args }) {
+        return (value as any[]).map((item, i) =>
+            this._typesImpl[i].castToType({
+                ...args,
+                value: item,
+                metaTypeImpl: this._typesImpl[i]
+            })
+        )
     }
 
-    castToRawValue({ value }) {
-        return (value as any[])?.map((item, i) => this._typesImpl[i].castToRawValue(item))
+    castToRawValue({ value, ...args }) {
+        return (value as any[])?.map((item, i) =>
+            this._typesImpl[i].castToRawValue({
+                ...args,
+                value: item,
+                metaTypeImpl: this._typesImpl[i]
+            })
+        )
     }
 
     static isCompatible(value: any): boolean {

@@ -13,41 +13,60 @@ type ArrayMetaTypeArgs = {
 export class ArrayImpl extends MetaTypeImpl {
     name = 'ARRAY'
 
-    private _subType: MetaTypeImpl = null
-
     configure(args?: MetaTypeArgs & ArrayMetaTypeArgs) {
         const notEmpty = args?.notEmpty
-        const subType = MetaTypeImpl.getMetaTypeImpl(args?.subType || ANY())
         const validators = notEmpty
             ? [...(args?.validators || []), NotEmptyArray]
             : [...(args?.validators || [])]
 
-        this._subType = subType
+        let subType: any = args?.subType || args?.default
+
+        if (Array.isArray(subType)) {
+            if (subType.length === 1) {
+                subType = MetaTypeImpl.getMetaType(subType[0])
+            } else if (subType.length > 1) {
+                subType = ANY_OF(subType)
+            } else {
+                subType = ANY()
+            }
+        }
+
+        if (!subType) subType = ANY()
+
+        this.subType = MetaType.getMetaImpl(subType)
         this.validators = validators
         this.schema = {
             type: 'array',
-            items: subType.schema,
+            items: this.subType.schema,
             minItems: notEmpty ? 1 : 0
         }
+    }
+
+    toString() {
+        return `${this.name}<${this.subType}>`
     }
 
     isMetaTypeOf(value: any) {
         return (
             Array.isArray(value) &&
-            value.every((valueItem) => this._subType.isMetaTypeOf(valueItem))
+            value.every((valueItem) => this.subType.isMetaTypeOf(valueItem))
         )
     }
 
-    castToType({ value }) {
+    castToType({ value, ...args }) {
         if ((value as any) === Array) {
             return null
         }
 
-        return value?.map((item: any) => this._subType.castToType(item))
+        return value?.map((item: any) =>
+            this.subType.castToType({ ...args, value: item, metaTypeImpl: this.subType })
+        )
     }
 
-    castToRawValue({ value }) {
-        return value?.map((item: any) => this._subType.castToRawValue(item))
+    castToRawValue({ value, ...args }) {
+        return value?.map((item: any) =>
+            this.subType.castToRawValue({ ...args, value: item, metaTypeImpl: this.subType })
+        )
     }
 
     static isCompatible(value: any): boolean {
@@ -98,18 +117,6 @@ export function ARRAY<T = any, R = PrepareBaseType<T>>(
     args?: MetaTypeArgs<ARRAY<R>> & ArrayMetaTypeArgs
 ): ARRAY<R>
 export function ARRAY(subType?: any, args?: MetaTypeArgs & ArrayMetaTypeArgs) {
-    if (Array.isArray(subType)) {
-        if (subType.length === 1) {
-            subType = subType[0]
-        } else if (subType.length > 1) {
-            subType = ANY_OF(subType)
-        } else {
-            subType = ANY()
-        }
-    }
-
-    if (!subType) subType = ANY()
-
     return MetaType(
         ArrayImpl.build({
             ...args,

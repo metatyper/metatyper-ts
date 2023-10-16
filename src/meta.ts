@@ -24,7 +24,9 @@ export type MetaArgs = {
 }
 
 export function isMetaObject(obj: object) {
-    return !!Reflect.getOwnPropertyDescriptor(obj, IsMetaObjectSymbol)?.value
+    return (
+        obj instanceof Object && !!Reflect.getOwnPropertyDescriptor(obj, IsMetaObjectSymbol)?.value
+    )
 }
 
 function initMetaObject(targetObject: object, origObj: object) {
@@ -254,13 +256,53 @@ function setMetaObjectValue(obj: object, propName: string, propValue: any) {
     return true
 }
 
+export function inspectMetaObjectValue(value: any) {
+    if (typeof value === 'string') {
+        return `'${value}'`
+    }
+
+    if (typeof value === 'bigint') {
+        return `${value}n`
+    }
+
+    if (value instanceof Date) {
+        return value.toISOString()
+    }
+
+    if (value instanceof MetaTypeImpl) {
+        return `${value}`
+    }
+
+    if (MetaType.isMetaType(value)) {
+        return `${value}`
+    }
+
+    if (Array.isArray(value)) {
+        return `[${value.map(inspectMetaObjectValue).join(', ')}]`
+    }
+
+    if (isMetaObject(value)) {
+        return `${value}`
+    }
+
+    if (value instanceof Object) {
+        const objOwnPropsStrings = Object.entries(value)
+            .sort(([key1], [key2]) => key1.localeCompare(key2))
+            .map(([name, value]) => `${name}: ${inspectMetaObjectValue(value)}`)
+
+        return `{ ${objOwnPropsStrings.join(', ')} }`
+    }
+
+    return `${value}`
+}
+
 function metaObjectToString(obj: object) {
     const name = obj[MetaObjectNameSymbol] || 'object'
 
     if (!isMetaObject(obj)) {
         const objOwnPropsStrings = Object.entries(obj)
             .sort(([key1], [key2]) => key1.localeCompare(key2))
-            .map(([name, value]) => `${name} = ${value}`)
+            .map(([name, value]) => `${name} = ${inspectMetaObjectValue(value)}`)
 
         return `[${name} extends Meta] { ${objOwnPropsStrings.join('; ')} }`
     }
@@ -301,10 +343,12 @@ function metaObjectToString(obj: object) {
 
     const objOwnDeclarationStrings = Object.entries(ownDeclarations)
         .sort(([key1], [key2]) => key1.localeCompare(key2))
-        .map(([name, value]) => `${name}: ${value} = ${obj[name]}`)
+        .map(([name, value]) => {
+            return `${name}: ${value} = ${inspectMetaObjectValue(obj[name])}`
+        })
 
     const objInheritedDeclarationStrings = Object.entries(inheritedDeclarations).map(
-        ([name, value]) => `[${name}]: ${value} = ${obj[name]}`
+        ([name, value]) => `[${name}]: ${value} = ${inspectMetaObjectValue(obj[name])}`
     )
 
     return `[meta ${name}] { ${objOwnDeclarationStrings.join('; ')}${
@@ -467,6 +511,13 @@ export function Meta<T extends object>(base?: T, args?: MetaArgs): T {
 
     Object.defineProperty(newObj, MetaObjectSerializationIsActiveSymbol, {
         value: !args?.disableSerialization,
+        writable: true
+    })
+
+    Object.defineProperty(newObj, Symbol.for('nodejs.util.inspect.custom'), {
+        value: function toString() {
+            return metaObjectToString(this)
+        },
         writable: true
     })
 

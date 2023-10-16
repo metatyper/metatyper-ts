@@ -25,6 +25,10 @@ export class AnyOfImpl extends MetaTypeImpl {
         }
     }
 
+    toString() {
+        return `${this.name}<${this._typesImpl.join(' | ')}>`
+    }
+
     getMetaTypeOf(value: any) {
         return this._typesImpl.find((metaType) => metaType.isMetaTypeOf(value))
     }
@@ -33,12 +37,16 @@ export class AnyOfImpl extends MetaTypeImpl {
         return this.getMetaTypeOf(value) !== undefined
     }
 
-    castToType({ value }) {
-        return this.getMetaTypeOf(value)?.castToType(value) ?? value
+    castToType({ value, ...args }) {
+        const metaTypeImpl = this.getMetaTypeOf(value)
+
+        return metaTypeImpl?.castToType({ ...args, value, metaTypeImpl }) ?? value
     }
 
-    castToRawValue({ value }) {
-        this.getMetaTypeOf(value)?.castToRawValue(value) ?? value
+    castToRawValue({ value, ...args }) {
+        const metaTypeImpl = this.getMetaTypeOf(value)
+
+        return metaTypeImpl?.castToRawValue({ ...args, value, metaTypeImpl }) ?? value
     }
 
     static isCompatible(_value: any) {

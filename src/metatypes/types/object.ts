@@ -8,7 +8,7 @@ export class ObjectImpl extends MetaTypeImpl {
     name = 'OBJECT'
 
     configure(args?: MetaTypeArgs) {
-        let subType = args?.subType
+        let subType = args?.subType || args?.default
 
         if (!subType) {
             subType = ANY()
@@ -22,6 +22,21 @@ export class ObjectImpl extends MetaTypeImpl {
             throw new TypeBuildError('subType should be Record<any, any> or ANY()', ObjectImpl)
         }
 
+        subType = Object.fromEntries(
+            Object.entries(subType).map(([key, value]) => {
+                const impl = MetaTypeImpl.getMetaTypeImpl(value)
+
+                if (!impl) {
+                    throw new TypeBuildError(
+                        `subType contains a value for which the meta type cannot be found: ${value}`,
+                        ObjectImpl
+                    )
+                }
+
+                return [key, impl]
+            })
+        )
+
         const schema: SchemaType =
             subType === ANY()
                 ? {
@@ -30,10 +45,7 @@ export class ObjectImpl extends MetaTypeImpl {
                 : {
                       type: 'object',
                       properties: Object.fromEntries(
-                          Object.entries<any>(subType).map(([typeKey, typeValue]) => [
-                              typeKey,
-                              MetaTypeImpl.getMetaTypeImpl(typeValue)?.schema
-                          ])
+                          Object.entries<any>(subType).map(([key, impl]) => [key, impl.schema])
                       )
                       // TODO: add required: Object.keys(subType)
                   }
@@ -42,17 +54,24 @@ export class ObjectImpl extends MetaTypeImpl {
         this.subType = subType
     }
 
-    isMetaTypeOf(type: any) {
+    toString() {
+        const objOwnPropsStrings = Object.entries(this.subType)
+            .sort(([key1], [key2]) => key1.localeCompare(key2))
+            .map(([name, value]) => `${name}: ${value}`)
+
+        return `{ ${objOwnPropsStrings.join(', ')} }`
+    }
+
+    isMetaTypeOf(valueToCheck: any) {
         if (this.subType === ANY()) {
-            return type instanceof Object
+            return valueToCheck instanceof Object
         }
 
         return (
-            type instanceof Object &&
+            valueToCheck instanceof Object &&
             Object.entries(this.subType).every(
-                ([typeKey, typeValue]: any) =>
-                    type[typeKey] !== undefined &&
-                    MetaTypeImpl.getMetaTypeImpl(typeValue)?.isMetaTypeOf(type[typeKey])
+                ([key, impl]: any) =>
+                    valueToCheck[key] !== undefined && impl.isMetaTypeOf(valueToCheck[key])
             )
         )
     }

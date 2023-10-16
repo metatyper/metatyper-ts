@@ -128,7 +128,7 @@ export class MetaTypeImpl {
     protected configure(_args?: MetaTypeArgs) {}
 
     toString() {
-        return `${this.name}${this.subType ? `<${this.subType}>` : ''}`
+        return `${this.name}`
     }
 
     [Symbol.for('nodejs.util.inspect.custom')]() {
