@@ -815,3 +815,5 @@ Meta.declare = Meta.d = (metaType: MetaTypeFlag) => {
         target[MetaObjectInitialDeclarationsSymbol] = initialDeclarations
     }
 }
+
+export const M = Meta
