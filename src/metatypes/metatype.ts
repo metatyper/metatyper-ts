@@ -1,8 +1,6 @@
-import { MetaTypeImpl } from './metatypeImpl'
+import { MetaTypeImpl, SchemaType } from './metatypeImpl'
 
 export const IsMetaTypeSymbol = Symbol('IsMetaType')
-export const MetaTypeSymbol = Symbol('MetaType')
-export const MetaTypeImplSymbol = Symbol('MetaTypeImpl')
 
 export type PrepareBaseType<T> = T extends MetaTypeFlag
     ? T
@@ -32,19 +30,19 @@ export type MetaTypeFlag = {
     [IsMetaTypeSymbol]?: true
 }
 
-export type MetaTypeProps<T, ImplT, R> = {
-    [MetaTypeSymbol]?: MetaType<T, ImplT, R>
-    [MetaTypeImplSymbol]?: ImplT
-}
+export type MetaTypeProps<ImplT = MetaTypeImpl> = {
+    metaTypeImpl?: ImplT
+    schema?: SchemaType
 
-export type MetaTypeMethods<R> = {
-    parse?: (value: any) => R
+    serialize?: (value: any) => any
+    deserialize?: (value: any) => any
+    validate?: (value: any) => boolean
+    parse?: (value: any) => any
 }
 
 export type MetaType<T, ImplT = MetaTypeImpl, R = PrepareBaseType<T>> = R &
     MetaTypeFlag &
-    MetaTypeProps<T, ImplT, R> &
-    MetaTypeMethods<R>
+    MetaTypeProps<ImplT>
 
 export function MetaType<T = any, ImplT extends MetaTypeImpl = MetaTypeImpl>(
     metaTypeImpl: ImplT
@@ -59,8 +57,14 @@ export function MetaType<T = any, ImplT extends MetaTypeImpl = MetaTypeImpl>(
 
     const metaType = {
         [IsMetaTypeSymbol]: true,
-        [MetaTypeSymbol]: null,
-        [MetaTypeImplSymbol]: metaTypeImpl,
+
+        get metaTypeImpl(): ImplT {
+            return metaTypeImpl
+        },
+
+        get schema(): SchemaType {
+            return JSON.parse(JSON.stringify(metaTypeImpl.schema))
+        },
 
         [Symbol.for('nodejs.util.inspect.custom')]() {
             return metaTypeImpl.toString()
@@ -92,17 +96,12 @@ export function MetaType<T = any, ImplT extends MetaTypeImpl = MetaTypeImpl>(
             metaTypeImpl.validate(newValue)
 
             return newValue
-        },
-
-        get schema() {
-            return JSON.parse(JSON.stringify(metaTypeImpl.schema))
         }
     }
 
-    metaType[MetaTypeSymbol] = metaType
-
-    return metaType as any
+    return Object.freeze(metaType) as any
 }
 
 MetaType.isMetaType = (obj: any) => obj && !!obj[IsMetaTypeSymbol]
-MetaType.getMetaImpl = (obj: any) => (obj && (obj[MetaTypeImplSymbol] as MetaTypeImpl)) || null
+
+MetaType.getMetaImpl = (obj: any) => (obj && !!obj[IsMetaTypeSymbol] && obj?.metaTypeImpl) ?? null

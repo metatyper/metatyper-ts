@@ -3,11 +3,8 @@ import { TypeIsEqual, TypeExtends } from '../../../src/utils/typeTest'
 
 import {
     IsMetaTypeSymbol,
-    MetaTypeSymbol,
-    MetaTypeImplSymbol,
     PrepareBaseType,
     MetaTypeFlag,
-    MetaTypeProps,
     type MetaType
 } from '../../../src/metatypes/metatype'
 
@@ -22,32 +19,7 @@ const _type = {
 const _typeValue = {
     a: [1, '2', new Date()] as const
 }
-const _metaTypeMock = {} as MetaType<typeof _type, typeof _implMock, typeof _typeValue>
 const _implMock = { name: 'CUSTOM' }
-
-TypeExtends<
-    {
-        [MetaTypeSymbol]: typeof _metaTypeMock
-        [MetaTypeImplSymbol]: typeof _implMock
-    },
-    MetaTypeProps<typeof _type, typeof _implMock, typeof _typeValue>
->(true)
-
-TypeExtends<
-    {
-        [MetaTypeSymbol]: unknown
-        [MetaTypeImplSymbol]: typeof _implMock
-    },
-    MetaTypeProps<typeof _type, typeof _implMock, typeof _typeValue>
->(false)
-
-TypeExtends<
-    {
-        [MetaTypeSymbol]: typeof _metaTypeMock
-        [MetaTypeImplSymbol]: unknown
-    },
-    MetaTypeProps<typeof _type, typeof _implMock, typeof _typeValue>
->(false)
 
 TypeExtends(
     {
@@ -67,8 +39,6 @@ TypeIsEqual(
 TypeExtends<
     typeof _typeValue & {
         [IsMetaTypeSymbol]: true
-        [MetaTypeSymbol]: typeof _metaTypeMock
-        [MetaTypeImplSymbol]: typeof _implMock
     },
     MetaType<typeof _type, typeof _implMock>
 >(true)
@@ -76,8 +46,6 @@ TypeExtends<
 TypeExtends<
     {
         [IsMetaTypeSymbol]: true
-        [MetaTypeSymbol]: typeof _metaTypeMock
-        [MetaTypeImplSymbol]: typeof _implMock
     },
     MetaType<typeof _type, typeof _implMock>
 >(false)
