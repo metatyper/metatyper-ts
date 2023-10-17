@@ -1,7 +1,7 @@
 <p align="center">
     <img src="logo.png" align="center" alt="MetaTyper" />
     <hr/>
-    <p align="center"><i>new approach to types of your code</i></p>
+    <p align="center"><i>use built-in features to do more</i></p>
 </p>
 
 <br/>
