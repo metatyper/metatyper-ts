@@ -290,6 +290,9 @@ function Meta<T extends object>(base: T, args?: MetaArgs): T
 
 ```ts
 type MetaArgs = {
+    // meta object name (used in toString)
+    name?: string
+
     // enable default js logic for properties
     propertiesIgnore?: string[]
 

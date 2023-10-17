@@ -14,6 +14,7 @@ export const MetaObjectForPropsSymbol = Symbol('[[MetaObjectForProps]]')
 /**
  * Meta args
  *
+ * @param name - meta object name (used in toString)
  * @param propsIgnore - enable default js logic for properties
  * @param disableValidation - disable all validators
  * @param disableSerialization - disable all serializers
@@ -21,6 +22,7 @@ export const MetaObjectForPropsSymbol = Symbol('[[MetaObjectForProps]]')
  * @param instanceArgs - MetaArgs for configuring function/class meta instances
  */
 export type MetaArgs = {
+    name?: string
     propsIgnore?: string[]
     disableValidation?: boolean
     disableSerialization?: boolean
@@ -512,7 +514,25 @@ export function Meta<T extends object>(base?: T, metaArgs?: MetaArgs): T {
             writable: true
         })
     } else {
-        newObj = Array.isArray(base) ? [] : {}
+        if (Array.isArray(base)) {
+            newObj = []
+
+            if (metaArgs?.name) {
+                Object.defineProperty(newObj, MetaObjectNameSymbol, {
+                    value: `array ${metaArgs?.name}`,
+                    configurable: true
+                })
+            }
+        } else {
+            newObj = {}
+
+            if (metaArgs?.name) {
+                Object.defineProperty(newObj, MetaObjectNameSymbol, {
+                    value: `object ${metaArgs?.name}`,
+                    configurable: true
+                })
+            }
+        }
     }
 
     Object.defineProperty(newObj, IsMetaObjectSymbol, {
