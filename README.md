@@ -1380,8 +1380,6 @@ These libs are worth a look:
 
 ## ToDo
 
-1. implement property decorators (like in the typeorm).
-2. implement Meta type default as a function.
-3. implement more popular validators and serializers.
-4. implement additional tests.
-5. rewrite docs.
+1. implement more popular validators and serializers.
+2. implement additional tests.
+3. rewrite docs.

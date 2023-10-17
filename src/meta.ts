@@ -1,4 +1,4 @@
-import { AnyImpl, MetaType, MetaTypeImpl, SchemaType } from './metatypes'
+import { AnyImpl, MetaType, MetaTypeFlag, MetaTypeImpl, SchemaType } from './metatypes'
 import { isClass } from './utils/classes'
 
 export const IsMetaObjectSymbol = Symbol('[[IsMetaObject]]')
@@ -6,6 +6,7 @@ export const MetaObjectNameSymbol = Symbol('[[MetaObjectName]]')
 export const MetaObjectPropsIgnoreSymbol = Symbol('[[MetaObjectPropsIgnore]]')
 export const MetaObjectValidationIsActiveSymbol = Symbol('[[MetaObjectValidationIsActive]]')
 export const MetaObjectSerializationIsActiveSymbol = Symbol('[[MetaObjectSerializationIsActive]]')
+export const MetaObjectInitialDeclarationsSymbol = Symbol('[[MetaObjectInitialDeclarations]]')
 export const MetaObjectDeclarationSymbol = Symbol('[[MetaObjectDeclaration]]')
 export const MetaObjectValuesSymbol = Symbol('[[MetaObjectValues]]')
 export const MetaObjectForPropsSymbol = Symbol('[[MetaObjectForProps]]')
@@ -49,6 +50,19 @@ function initMetaObject(targetObject: object, origObj: object) {
     const descriptors: Record<string, PropertyDescriptor> = {}
     const declarations: Record<string, MetaTypeImpl> = targetObject[MetaObjectDeclarationSymbol]
     const values: Record<string, any> = targetObject[MetaObjectValuesSymbol]
+
+    if (targetObject[MetaObjectInitialDeclarationsSymbol]) {
+        for (const [propName, declaration] of Object.entries<any>(
+            targetObject[MetaObjectInitialDeclarationsSymbol]
+        )) {
+            declarations[propName] = declaration
+            descriptors[propName] = {
+                value: declaration.default,
+                writable: true,
+                configurable: true
+            }
+        }
+    }
 
     for (const propName of Reflect.ownKeys(origObj)) {
         if (typeof propName === 'string' && !propsIgnore?.includes(propName)) {
@@ -514,6 +528,10 @@ export function Meta<T extends object>(base?: T, metaArgs?: MetaArgs): T {
         value: {}
     })
 
+    Object.defineProperty(newObj, MetaObjectInitialDeclarationsSymbol, {
+        value: base[MetaObjectInitialDeclarationsSymbol]
+    })
+
     Object.defineProperty(newObj, MetaObjectValuesSymbol, {
         value: newObj
     })
@@ -786,4 +804,14 @@ Meta.copy = <T extends object>(obj: T, args?: MetaArgs): T => {
     }
 
     return newMeta
+}
+
+Meta.declare = Meta.d = (metaType: MetaTypeFlag) => {
+    return (target: object, propName: string) => {
+        const initialDeclarations = target[MetaObjectInitialDeclarationsSymbol] || {}
+
+        initialDeclarations[propName] = MetaType.getMetaImpl(metaType)
+
+        target[MetaObjectInitialDeclarationsSymbol] = initialDeclarations
+    }
 }
