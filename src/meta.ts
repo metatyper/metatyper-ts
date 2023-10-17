@@ -17,12 +17,14 @@ export const MetaObjectForPropsSymbol = Symbol('[[MetaObjectForProps]]')
  * @param disableValidation - disable all validators
  * @param disableSerialization - disable all serializers
  * @param disableInheritance - the meta object will not have a prototype
+ * @param instanceArgs - MetaArgs for configuring function/class meta instances
  */
 export type MetaArgs = {
     propsIgnore?: string[]
     disableValidation?: boolean
     disableSerialization?: boolean
     disableInheritance?: boolean
+    instanceArgs?: MetaArgs
 }
 
 export function isMetaObject(obj: object) {
@@ -370,7 +372,7 @@ function metaObjectToString(obj: object) {
  * Create Meta object
  *
  * @param base - the original object that is used as the parent object (also all properties will be copied)
- * @param args - {@link MetaArgs}
+ * @param metaArgs - {@link MetaArgs}
  *
  * @example
  * ```ts
@@ -392,13 +394,13 @@ function metaObjectToString(obj: object) {
  * Cls1Instance.someClsInstanceProp = 2
  * ```
  */
-export function Meta<T extends object>(base?: T, args?: MetaArgs): T {
+export function Meta<T extends object>(base?: T, metaArgs?: MetaArgs): T {
     if (!base) {
         base = {} as T
     }
 
     const propsIgnore = [
-        ...(args?.propsIgnore || []),
+        ...(metaArgs?.propsIgnore || []),
         ...[
             'name',
             'length',
@@ -424,11 +426,11 @@ export function Meta<T extends object>(base?: T, args?: MetaArgs): T {
                 constructor(...args: any[]) {
                     super(...args)
 
-                    if (exports.IsMetaObjectSymbol in this) {
+                    if (IsMetaObjectSymbol in this) {
                         return this
                     }
 
-                    const instance = Meta(this) // TODO: add args
+                    const instance = Meta(this, metaArgs?.instanceArgs)
 
                     Object.defineProperty(instance, MetaObjectNameSymbol, {
                         value: `instance ${this.constructor.name}`,
@@ -449,13 +451,17 @@ export function Meta<T extends object>(base?: T, args?: MetaArgs): T {
             newObj = ((origFunc) => {
                 function metaFunc(...args: any[]) {
                     if (this) {
-                        const _this = origFunc.apply(this, ...args) || this || {}
+                        let _this = origFunc.apply(this, ...args) || this || {}
 
-                        if (exports.IsMetaObjectSymbol in _this) {
+                        if (!(_this instanceof Object)) {
+                            _this = this as any
+                        }
+
+                        if (IsMetaObjectSymbol in _this) {
                             return _this
                         }
 
-                        const instance = Meta(_this)
+                        const instance = Meta(_this, metaArgs?.instanceArgs)
 
                         Object.defineProperty(instance, MetaObjectNameSymbol, {
                             value: `instance ${this.constructor.name}`,
@@ -513,12 +519,12 @@ export function Meta<T extends object>(base?: T, args?: MetaArgs): T {
     })
 
     Object.defineProperty(newObj, MetaObjectValidationIsActiveSymbol, {
-        value: !args?.disableValidation,
+        value: !metaArgs?.disableValidation,
         writable: true
     })
 
     Object.defineProperty(newObj, MetaObjectSerializationIsActiveSymbol, {
-        value: !args?.disableSerialization,
+        value: !metaArgs?.disableSerialization,
         writable: true
     })
 
@@ -531,7 +537,7 @@ export function Meta<T extends object>(base?: T, args?: MetaArgs): T {
 
     initMetaObject(newObj, base)
 
-    if (!args?.disableInheritance && base) Object.setPrototypeOf(newObj, base)
+    if (!metaArgs?.disableInheritance && base) Object.setPrototypeOf(newObj, base)
 
     return new Proxy(newObj, {
         get(target, propName, receiver) {

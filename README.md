@@ -171,13 +171,20 @@ const LowerStringValidator = {
     validate: ({ value }) => !value || value === value.toLowerCase()
 }
 
-@Meta.Class()
+@Meta.Class({
+    propsIgnore: [ 'someAnotherClassFlag' ],
+    instanceArgs: {
+        propsIgnore: [ 'someInstanceField' ]
+    }
+})
 class MyOldClass {
     id = NUMBER({ default: 0 }) // default 0
     username = STRING({ validators: [LowerStringValidator] }) // default null
     stars = 0
+    someInstanceField = 0
 
-    static someFlag = true
+    static someClassFlag = true
+    static someAnotherClassFlag = true
 }
 
 const instance = new MyOldClass()
@@ -189,10 +196,12 @@ instance.username = 'Abc' // validation error (LowerStringValidator)
 Object.assign(instance, {
     id: 2,
     username: 0, // ok, will cast to '0'
-    stars: 'str' // validation error
+    stars: 'str', // validation error,
+    someInstanceField: '1' // ok, because the field in the propsIgnore
 })
 
 MyOldClass.someFlag = 'string' as any // validation error
+MyOldClass.someAnotherClassFlag = 'string' as any // ok, because the field in the propsIgnore
 ```
 
 <br/>
@@ -1371,10 +1380,8 @@ These libs are worth a look:
 
 ## ToDo
 
-1. implement the logic of using a Meta-object as a Meta-type.
-2. implement additional tests.
-3. implement property decorators (like in the typeorm).
-4. implement the logic of configuring MetaArgs of Meta class instances.
-5. implement Meta type default as a function.
-6. implement more popular validators and serializers.
-7. rewrite docs.
+1. implement property decorators (like in the typeorm).
+2. implement Meta type default as a function.
+3. implement more popular validators and serializers.
+4. implement additional tests.
+5. rewrite docs.
