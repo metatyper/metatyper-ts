@@ -16,11 +16,13 @@ export const MetaObjectForPropsSymbol = Symbol('[[MetaObjectForProps]]')
  * @param propsIgnore - enable default js logic for properties
  * @param disableValidation - disable all validators
  * @param disableSerialization - disable all serializers
+ * @param disableInheritance - the meta object will not have a prototype
  */
 export type MetaArgs = {
     propsIgnore?: string[]
     disableValidation?: boolean
     disableSerialization?: boolean
+    disableInheritance?: boolean
 }
 
 export function isMetaObject(obj: object) {
@@ -50,17 +52,16 @@ function initMetaObject(targetObject: object, origObj: object) {
         if (typeof propName === 'string' && !propsIgnore?.includes(propName)) {
             const descriptor = Reflect.getOwnPropertyDescriptor(origObj, propName)
 
-            if (descriptor.get || descriptor.set) {
-                continue
-            }
-
             descriptors[propName] = { ...descriptor }
         }
     }
 
     Object.entries(descriptors)
         .map(([propName, descriptor]) => {
-            if (descriptor?.set || descriptor?.get) {
+            if (descriptor.get || descriptor.set) {
+                Reflect.deleteProperty(values, propName)
+                Reflect.defineProperty(values, propName, descriptor)
+
                 return null
             }
 
@@ -75,14 +76,12 @@ function initMetaObject(targetObject: object, origObj: object) {
                 declaration = MetaTypeImpl.getMetaTypeImpl(descriptor.value)
             }
 
-            if (doSerialize) {
-                if (doSerialize && declaration) {
-                    descriptor.value = declaration.deserialize(descriptor.value, {
-                        place: 'init',
-                        propName,
-                        targetObject
-                    })
-                }
+            if (doSerialize && declaration) {
+                descriptor.value = declaration.deserialize(descriptor.value, {
+                    place: 'init',
+                    propName,
+                    targetObject
+                })
             }
 
             return [propName, declaration, descriptor]
@@ -213,9 +212,18 @@ function setMetaObjectValue(obj: object, propName: string, propValue: any) {
     if (!declaration) {
         if (descriptor && descriptor.value !== undefined) {
             declaration = MetaTypeImpl.getMetaTypeImpl(descriptor?.value)
-        } else {
-            declaration = MetaTypeImpl.getMetaTypeImpl(propValue) || AnyImpl.build()
         }
+
+        if (!declaration) {
+            declaration = MetaTypeImpl.getMetaTypeImpl(propValue)
+        }
+    }
+
+    // if there is no MetaType for the value, the property will ignore Meta logic
+    if (!declaration) {
+        values[propName] = propValue
+
+        return true
     }
 
     if (MetaType.isMetaType(propValue)) {
@@ -523,7 +531,7 @@ export function Meta<T extends object>(base?: T, args?: MetaArgs): T {
 
     initMetaObject(newObj, base)
 
-    if (base) Object.setPrototypeOf(newObj, base)
+    if (!args?.disableInheritance && base) Object.setPrototypeOf(newObj, base)
 
     return new Proxy(newObj, {
         get(target, propName, receiver) {
@@ -762,4 +770,14 @@ Meta.getJsonSchema = (obj: object, override?: Record<string, any>) => {
         type: 'object',
         properties: schemaProps
     } as SchemaType
+}
+
+Meta.copy = <T extends object>(obj: T, args?: MetaArgs): T => {
+    const newMeta = Meta(obj, { ...(args || {}), disableInheritance: true })
+
+    if (!args?.disableInheritance) {
+        Object.setPrototypeOf(newMeta, Object.getPrototypeOf(obj))
+    }
+
+    return newMeta
 }

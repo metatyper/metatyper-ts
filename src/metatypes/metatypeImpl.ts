@@ -343,12 +343,18 @@ export class MetaTypeImpl {
     }
 
     static getMetaType(valueToFind: any, args?: MetaTypeArgs): MetaType<unknown> {
+        const metaTypeImplInstance = this.getMetaTypeImpl(valueToFind, args)
+
+        return MetaType(metaTypeImplInstance)
+    }
+
+    static getMetaTypeImpl(valueToFind: any, args?: MetaTypeArgs): MetaTypeImpl {
         if (MetaType.isMetaType(valueToFind)) {
-            return valueToFind as any
+            return MetaType.getMetaImpl(valueToFind)
         }
 
         if (valueToFind instanceof MetaTypeImpl) {
-            return MetaType(valueToFind)
+            return valueToFind
         }
 
         let maxCompatibilityScore = -Infinity
@@ -372,13 +378,7 @@ export class MetaTypeImpl {
             ...args
         })
 
-        return MetaType(metaTypeImplInstance)
-    }
-
-    static getMetaTypeImpl(valueToFind: any, args?: MetaTypeArgs): MetaTypeImpl {
-        const metaType = this.getMetaType(valueToFind, args)
-
-        return MetaType.getMetaImpl(metaType) as any
+        return metaTypeImplInstance
     }
 }
 

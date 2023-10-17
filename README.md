@@ -39,6 +39,7 @@ More Facts:
     - [Meta.Class decorator](#metaclass-decorator)
     - [Meta args](#meta-args)
     - [Meta inheritance](#meta-inheritance)
+    - [Meta copy](#meta-copy)
   - [Meta types](#meta-types)
     - [MetaType](#metatype)
     - [MetaType Implementation](#metatype-implementation)
@@ -292,6 +293,9 @@ type MetaArgs = {
 
     // disable all serializers
     disableSerialization?: boolean 
+
+    // The Meta object will not have a prototype
+    disableInheritance?: boolean
 }
 ```
 
@@ -396,6 +400,31 @@ console.log(cInstance.toString())
 > Unlike simple objects, instances have Meta properties of their parent classes.
 
 > Static classes work as simple Meta objects.
+
+#### Meta copy
+
+In some cases it is necessary to create a copy of an object.
+You can use the `Meta(obj?: object, args?: MetaArgs)` method to create a copy of an object, but the prototype chain will include the object.
+If you need to create a real copy of an object, you can call the `Meta.copy(obj: object, args?: MetaArgs)` method.  
+The main difference is that the new obj will inherit from `Object.getPrototypeOf(obj)` rather than from `obj` itself.
+
+Example:
+
+```ts
+import { Meta } from 'metatyper'
+
+const obj = {
+    someField: 1
+}
+
+const metaObj1 = Meta(obj)
+const metaObj2 = Meta(metaObj1)
+const metaObj3 = Meta.copy(metaObj1)
+
+console.log(Object.getPrototypeOf(metaObj1) === obj)
+console.log(Object.getPrototypeOf(metaObj2) === metaObj1)
+console.log(Object.getPrototypeOf(metaObj3) === obj)
+```
 
 <br/>
 
@@ -1346,11 +1375,10 @@ These libs are worth a look:
 
 ## ToDo
 
-1. implement copy and deep copy methods.
-2. implement the logic of using a Meta-object as a Meta-type.
-3. implement additional tests.
-4. implement property decorators (like in the typeorm).
-5. implement the logic of configuring MetaArgs of Meta class instances.
-6. implement Meta type default as a function.
-7. implement more popular validators and serializers.
-8. rewrite docs.
+1. implement the logic of using a Meta-object as a Meta-type.
+2. implement additional tests.
+3. implement property decorators (like in the typeorm).
+4. implement the logic of configuring MetaArgs of Meta class instances.
+5. implement Meta type default as a function.
+6. implement more popular validators and serializers.
+7. rewrite docs.
