@@ -321,7 +321,7 @@ export function inspectMetaObjectValue(value: any) {
 }
 
 function metaObjectToString(obj: object) {
-    const name = obj[MetaObjectNameSymbol] || 'object'
+    const name = obj[MetaObjectNameSymbol] || Array.isArray(obj) ? 'array' : 'object'
 
     if (!isMetaObject(obj)) {
         const objOwnPropsStrings = Object.entries(obj)
@@ -512,7 +512,7 @@ export function Meta<T extends object>(base?: T, metaArgs?: MetaArgs): T {
             writable: true
         })
     } else {
-        newObj = {}
+        newObj = Array.isArray(base) ? [] : {}
     }
 
     Object.defineProperty(newObj, IsMetaObjectSymbol, {
