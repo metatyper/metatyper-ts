@@ -106,8 +106,6 @@ or
 
 ## Guides
 
-<br/>
-
 ### Basic usage
 
 First of all, you can create a Meta object from your old object.
@@ -200,8 +198,6 @@ MyOldClass.someFlag = 'string' as any // validation error
 <br/>
 
 ### Meta objects
-
-<br/>
 
 #### Meta
 
@@ -401,6 +397,8 @@ console.log(cInstance.toString())
 
 > Static classes work as simple Meta objects.
 
+<br/>
+
 #### Meta copy
 
 In some cases it is necessary to create a copy of an object.
@@ -429,8 +427,6 @@ console.log(Object.getPrototypeOf(metaObj3) === obj)
 <br/>
 
 ### Meta types
-
-<br/>
 
 #### MetaType
 
