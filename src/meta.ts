@@ -321,7 +321,7 @@ export function inspectMetaObjectValue(value: any) {
 }
 
 function metaObjectToString(obj: object) {
-    const name = obj[MetaObjectNameSymbol] || Array.isArray(obj) ? 'array' : 'object'
+    const name = obj[MetaObjectNameSymbol] || (Array.isArray(obj) ? 'array' : 'object')
 
     if (!isMetaObject(obj)) {
         const objOwnPropsStrings = Object.entries(obj)
