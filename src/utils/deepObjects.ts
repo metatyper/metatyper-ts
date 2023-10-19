@@ -1,88 +1,112 @@
 const DeepMapSourceRefSymbol = Symbol('DeepMapSourceRef')
-const DeepMapCircleRefSymbol = Symbol('DeepMapCircleRef')
+const DeepMapCircularRefSymbol = Symbol('DeepMapCircularRef')
+
+function isNotPlainObject(obj: any) {
+    if (
+        !(obj instanceof Object) ||
+        MetaType.isMetaType(obj) ||
+        obj instanceof MetaTypeImpl ||
+        Meta.isMetaObject(obj) ||
+        obj instanceof Date ||
+        obj instanceof Function
+    ) {
+        return true
+    }
+
+    return false
+}
 
 export function objectDeepMap(obj: object, processFunc: (obj: object) => any) {
-    const circlesMap = new WeakMap()
+    const objectsMap = new WeakMap()
 
-    let circleIndex = 1
+    if (isNotPlainObject(obj)) {
+        return processFunc(obj)
+    }
 
-    function _objectDeepProcess(curObj: any) {
-        if (curObj instanceof Object && circlesMap.has(curObj)) {
-            const circleObj = circlesMap.get(curObj)
-
-            const sourceRef = circleObj[DeepMapSourceRefSymbol]
-
-            if (!sourceRef) {
-                circleObj[DeepMapSourceRefSymbol] = {
-                    source: circleObj,
-                    index: circleIndex++
-                }
-            } else {
-                if (sourceRef.index === null) {
-                    sourceRef.index = circleIndex++
-                }
-            }
-
-            return {
-                [DeepMapCircleRefSymbol]: sourceRef
-            }
+    function deepCopyAndResolveCycles() {
+        if (isNotPlainObject(obj)) {
+            return obj
         }
 
-        if (
-            !(curObj instanceof Object) ||
-            MetaType.isMetaType(curObj) ||
-            curObj instanceof MetaTypeImpl ||
-            Meta.isMetaObject(curObj) ||
-            curObj instanceof Date ||
-            curObj instanceof Function
-        ) {
+        let circularIndex = 1
+
+        const newObj = {}
+
+        newObj[DeepMapSourceRefSymbol] = {
+            index: null,
+            source: newObj
+        }
+
+        objectsMap.set(obj, newObj)
+
+        const processingStack = [obj]
+
+        while (processingStack.length > 0) {
+            const origObj = processingStack.pop()
+            const newObj = objectsMap.get(origObj)
+
+            Object.entries<any>(origObj).forEach(([key, value]) => {
+                if (!isNotPlainObject(value)) {
+                    if (!objectsMap.has(value)) {
+                        const newValue = {}
+
+                        newValue[DeepMapSourceRefSymbol] = {
+                            index: null,
+                            source: newValue
+                        }
+
+                        objectsMap.set(value, newValue)
+                        processingStack.push(value)
+
+                        value = newValue
+                    } else {
+                        const ref = objectsMap.get(value)[DeepMapSourceRefSymbol]
+
+                        if (ref.index === null) {
+                            ref.index = circularIndex++
+                        }
+
+                        value = {
+                            [DeepMapCircularRefSymbol]: ref
+                        }
+                    }
+                }
+
+                newObj[key] = value
+            })
+        }
+
+        return newObj
+    }
+
+    const objCopy = deepCopyAndResolveCycles()
+
+    function deepProcess(curObj: any) {
+        if (!curObj[DeepMapSourceRefSymbol]?.index) {
+            delete curObj[DeepMapSourceRefSymbol]
+        }
+
+        if (isNotPlainObject(curObj)) {
             return processFunc(curObj)
         }
 
-        if (Array.isArray(curObj)) {
-            const newArr = [...curObj]
-
-            circlesMap.set(curObj, newArr)
-
-            newArr.forEach((item, i) => {
-                newArr[i] = _objectDeepProcess(item)
-            })
-
-            return processFunc(newArr)
-        }
-
-        // if object
-
-        const newObj = { ...curObj }
-
-        newObj[DeepMapSourceRefSymbol] = {
-            source: newObj,
-            index: null
-        }
-
-        circlesMap.set(curObj, newObj)
-
-        Object.entries(newObj).forEach(([key, value]) => {
-            newObj[key] = _objectDeepProcess(value)
+        Object.entries<any>(curObj).forEach(([key, value]) => {
+            curObj[key] = deepProcess(value)
         })
 
-        if (newObj[DeepMapSourceRefSymbol].index === null) {
-            delete newObj[DeepMapSourceRefSymbol]
-        }
-
-        return processFunc(newObj)
+        return processFunc(curObj)
     }
 
-    return _objectDeepProcess(obj)
+    return deepProcess(objCopy)
 }
 
-objectDeepMap.circleRef = (
+objectDeepMap.circularRef = (
     obj: object
 ): {
     source: object
     index: number
 } => {
-    return Object.getOwnPropertyDescriptor(obj, DeepMapCircleRefSymbol)?.value ?? null
+    return Object.getOwnPropertyDescriptor(obj, DeepMapCircularRefSymbol)?.value ?? null
 }
 
 objectDeepMap.sourceRef = (
@@ -143,12 +167,16 @@ export function inspectMetaValue(value: any) {
         }
 
         if (value instanceof Object) {
+            const circularRef = objectDeepMap.circularRef(value)
+
+            if (circularRef) {
+                return `[Circular *${circularRef.index}]`
+            }
+
             const objOwnPropsStrings = Object.entries(value)
                 .sort(([key1], [key2]) => key1.localeCompare(key2))
                 .map(([name, value]) => {
-                    const circleRef = objectDeepMap.circleRef(value)
-
-                    return `${name}: ${circleRef ? `[Circular *${circleRef.index}]` : value}`
+                    return `${name}: ${value}`
                 })
 
             const sourceRef = objectDeepMap.sourceRef(value)
