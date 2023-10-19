@@ -54,6 +54,7 @@ export type SerializerType = (
  * @param noDefaultSerializers - disable the serializers that the metatype class has (default serializers for all metatype instances)
  * @param noBuiltinValidators - disable the validators that all metatype have (e.g. MetaTypeValidator that checks a type of values)
  * @param noBuiltinSerializers - disable the serializers that all metatype have (e.g. AutoCast that cast values, like number => date)
+ * @param subTypesDefaultArgs - default arguments used to build all subtypes (could be a function)
  *
  * @typeParam T - type of value (is used for 'default' param)
  */
@@ -69,7 +70,8 @@ export type MetaTypeArgs<T = any> = {
     noDefaultSerializers?: boolean
     noBuiltinValidators?: boolean
     noBuiltinSerializers?: boolean
-}
+    subTypesDefaultArgs?: MetaTypeArgs | ((metaTypeImpl: MetaTypeImpl) => MetaTypeArgs)
+} & Record<string, any>
 
 export class MetaTypeImpl {
     name: string = null
@@ -90,10 +92,37 @@ export class MetaTypeImpl {
 
     subType: any = null
 
+    private _args: MetaTypeArgs = null
+
     private static _metaTypesRegistry: Record<string, StaticClass<typeof MetaTypeImpl>> = {}
 
-    static build<T extends MetaTypeImpl>(this: new (...args: any) => T, args?: MetaTypeArgs): T {
+    static build<T extends MetaTypeImpl>(
+        this: new (...args: any) => T,
+        args?: MetaTypeArgs | ((metaTypeImpl: MetaTypeImpl) => MetaTypeArgs)
+    ): T {
         const instance = new this()
+
+        if (args instanceof Function) {
+            args = args(instance)
+        }
+
+        instance.init(args)
+        instance.configure(args)
+
+        return instance
+    }
+
+    rebuild(args?: MetaTypeArgs | ((metaTypeImpl: MetaTypeImpl) => MetaTypeArgs)) {
+        if (args instanceof Function) {
+            args = args(this)
+        }
+
+        args = {
+            ...args,
+            ...this._args
+        }
+
+        const instance = new (this.constructor as any)()
 
         instance.init(args)
         instance.configure(args)
@@ -123,6 +152,24 @@ export class MetaTypeImpl {
 
         this.default = args?.default !== undefined ? args?.default : this.default
         this.nullable = !!(args?.nullable ?? this.nullable ?? true)
+
+        this._args = {
+            ...args,
+            name: this.name,
+            schema: this.schema,
+            default: this.default,
+            nullable: this.nullable,
+            validators: this.validators,
+            serializers: this.serializers,
+
+            noDefaultValidators: this.noDefaultValidators,
+            noDefaultSerializers: this.noDefaultSerializers,
+
+            noBuiltinValidators: this.noBuiltinValidators,
+            noBuiltinSerializers: this.noBuiltinSerializers,
+
+            subType: this.subType
+        }
     }
 
     protected configure(_args?: MetaTypeArgs) {}
@@ -334,7 +381,7 @@ export class MetaTypeImpl {
         return false
     }
 
-    static getCompatibilityScore(_value: any, _args?: MetaTypeArgs) {
+    static getCompatibilityScore(_value: any) {
         return -1
     }
 
@@ -342,43 +389,70 @@ export class MetaTypeImpl {
         MetaTypeImpl._metaTypesRegistry[type.name] = type
     }
 
-    static getMetaType(valueToFind: any, args?: MetaTypeArgs): MetaType<unknown> {
+    static getMetaType(
+        valueToFind: any,
+        args?: MetaTypeArgs | ((metaTypeImpl: MetaTypeImpl) => MetaTypeArgs)
+    ): MetaType<unknown> {
         const metaTypeImplInstance = this.getMetaTypeImpl(valueToFind, args)
 
         return MetaType(metaTypeImplInstance)
     }
 
-    static getMetaTypeImpl(valueToFind: any, args?: MetaTypeArgs): MetaTypeImpl {
+    static getMetaTypeImpl(
+        valueToFind: any,
+        args?: MetaTypeArgs | ((metaTypeImpl: MetaTypeImpl) => MetaTypeArgs)
+    ): MetaTypeImpl {
         if (MetaType.isMetaType(valueToFind)) {
-            return MetaType.getMetaImpl(valueToFind)
+            const metaTypeImpl = MetaType.getMetaImpl(valueToFind)
+
+            if (args) {
+                return metaTypeImpl.rebuild(args)
+            }
+
+            return metaTypeImpl
         }
 
         if (valueToFind instanceof MetaTypeImpl) {
+            if (args) {
+                return valueToFind.rebuild(args)
+            }
+
             return valueToFind
         }
 
         let maxCompatibilityScore = -Infinity
-        let maxCompatibilityScoreTypeImpl = null
+        let maxCompatibilityScoreTypeImplCls = null
 
-        for (const metaTypeImpl of Object.values(this._metaTypesRegistry)) {
-            if (metaTypeImpl.isCompatible(valueToFind)) {
-                const compatibilityScore = metaTypeImpl.getCompatibilityScore(valueToFind, args)
+        for (const metaTypeImplCls of Object.values(this._metaTypesRegistry)) {
+            if (metaTypeImplCls.isCompatible(valueToFind)) {
+                const compatibilityScore = metaTypeImplCls.getCompatibilityScore(valueToFind)
 
                 if (compatibilityScore > maxCompatibilityScore) {
                     maxCompatibilityScore = compatibilityScore
-                    maxCompatibilityScoreTypeImpl = metaTypeImpl
+                    maxCompatibilityScoreTypeImplCls = metaTypeImplCls
                 }
             }
         }
 
-        if (!maxCompatibilityScoreTypeImpl) return null
+        if (!maxCompatibilityScoreTypeImplCls) return null
 
-        const metaTypeImplInstance = maxCompatibilityScoreTypeImpl.build({
-            default: valueToFind,
-            ...args
-        })
+        if (args instanceof Function) {
+            const argsFunc = args as (_metaTypeImpl: MetaTypeImpl) => MetaTypeArgs
 
-        return metaTypeImplInstance
+            args = (metaTypeImpl: MetaTypeImpl) => {
+                return {
+                    ...(argsFunc(metaTypeImpl) || {}),
+                    default: valueToFind
+                }
+            }
+        } else {
+            args = {
+                default: valueToFind,
+                ...args
+            }
+        }
+
+        return maxCompatibilityScoreTypeImplCls.build(args)
     }
 }
 

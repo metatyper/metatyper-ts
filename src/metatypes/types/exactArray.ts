@@ -1,5 +1,6 @@
 import { MetaType, PrepareBaseType } from '../metatype'
 import { MetaTypeImpl, MetaTypeArgs } from '../metatypeImpl'
+import { metaTypesSchemaToValue } from '../../utils/meta'
 import { TypeBuildError } from '../../errors/typeBuild.error'
 
 export class ExactArrayImpl extends MetaTypeImpl {
@@ -7,14 +8,14 @@ export class ExactArrayImpl extends MetaTypeImpl {
     private _typesImpl: MetaTypeImpl[] = null
 
     configure(args?: MetaTypeArgs) {
-        const subType = args?.subType as any[]
+        const subType = this.subType as any[]
 
         if (!Array.isArray(subType)) {
             throw new TypeBuildError('subType is not array', ExactArrayImpl)
         }
 
         const typesImpl: MetaTypeImpl[] = subType.map((type) => {
-            const metaTypeImpl = MetaTypeImpl.getMetaTypeImpl(type)
+            const metaTypeImpl = MetaTypeImpl.getMetaTypeImpl(type, args?.subTypesDefaultArgs)
 
             if (!metaTypeImpl) {
                 throw new TypeBuildError(
@@ -27,6 +28,8 @@ export class ExactArrayImpl extends MetaTypeImpl {
         })
 
         this._typesImpl = typesImpl
+
+        this.default = metaTypesSchemaToValue(this.default)
 
         this.schema = {
             type: 'array',

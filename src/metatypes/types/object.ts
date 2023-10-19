@@ -1,44 +1,47 @@
 import { MetaType, PrepareBaseType } from '../metatype'
 import { MetaTypeImpl, MetaTypeArgs, SchemaType } from '../metatypeImpl'
 import { TypeBuildError } from '../../errors/typeBuild.error'
-import { ANY } from './any'
+import { metaTypesSchemaToValue } from '../../utils/meta'
+import { AnyImpl } from './any'
 
 @MetaTypeImpl.registerMetaType
 export class ObjectImpl extends MetaTypeImpl {
     name = 'OBJECT'
 
     configure(args?: MetaTypeArgs) {
-        let subType = args?.subType || args?.default
+        let subType = this.subType || this.default
 
-        if (!subType) {
-            subType = ANY()
-        }
-
-        if (!(subType instanceof Object)) {
-            throw new TypeBuildError('subType is not object', ObjectImpl)
-        }
-
-        if (subType !== ANY() && MetaType.isMetaType(subType)) {
+        if (subType && MetaType.isMetaType(subType)) {
             throw new TypeBuildError('subType should be Record<any, any> or ANY()', ObjectImpl)
         }
 
-        subType = Object.fromEntries(
-            Object.entries(subType).map(([key, value]) => {
-                const impl = MetaTypeImpl.getMetaTypeImpl(value)
+        if (subType && !(subType instanceof Object)) {
+            throw new TypeBuildError('subType is not object', ObjectImpl)
+        }
 
-                if (!impl) {
-                    throw new TypeBuildError(
-                        `subType contains a value for which the meta type cannot be found: ${value}`,
-                        ObjectImpl
-                    )
-                }
+        if (!subType) {
+            subType = AnyImpl.build(args?.subTypesDefaultArgs)
+        } else {
+            subType = Object.fromEntries(
+                Object.entries(subType).map(([key, value]) => {
+                    const impl = MetaTypeImpl.getMetaTypeImpl(value, args?.subTypesDefaultArgs)
 
-                return [key, impl]
-            })
-        )
+                    if (!impl) {
+                        throw new TypeBuildError(
+                            `subType contains a value for which the meta type cannot be found: ${value}`,
+                            ObjectImpl
+                        )
+                    }
+
+                    return [key, impl]
+                })
+            )
+
+            this.default = metaTypesSchemaToValue(this.default)
+        }
 
         const schema: SchemaType =
-            subType === ANY()
+            subType instanceof MetaTypeImpl
                 ? {
                       type: 'object'
                   }
@@ -59,11 +62,11 @@ export class ObjectImpl extends MetaTypeImpl {
             .sort(([key1], [key2]) => key1.localeCompare(key2))
             .map(([name, value]) => `${name}: ${value}`)
 
-        return `{ ${objOwnPropsStrings.join(', ')} }`
+        return `${this.name}<{${objOwnPropsStrings.join(', ')}}>`
     }
 
     isMetaTypeOf(valueToCheck: any) {
-        if (this.subType === ANY()) {
+        if (this.subType instanceof MetaTypeImpl) {
             return valueToCheck instanceof Object
         }
 
@@ -117,9 +120,11 @@ export type OBJECT<T extends object> = MetaType<T, ObjectImpl>
  * ```
  */
 export function OBJECT<T extends object, R extends object = PrepareBaseType<T>>(
-    subType: T,
+    subType?: T,
     args?: MetaTypeArgs<OBJECT<R>>
 ) {
+    if (!subType) subType = {} as T
+
     return MetaType<OBJECT<R>>(
         ObjectImpl.build({
             ...args,

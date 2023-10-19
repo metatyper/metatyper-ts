@@ -8,8 +8,8 @@ export class AnyOfImpl extends MetaTypeImpl {
     private _typesImpl: MetaTypeImpl[] = []
 
     configure(args?: MetaTypeArgs) {
-        const typesImpl: MetaTypeImpl[] = args.subType.map((type: any) => {
-            const metaTypeImpl = MetaTypeImpl.getMetaTypeImpl(type)
+        const typesImpl: MetaTypeImpl[] = this.subType.map((type: any) => {
+            const metaTypeImpl = MetaTypeImpl.getMetaTypeImpl(type, args?.subTypesDefaultArgs)
 
             if (!metaTypeImpl) {
                 throw new TypeBuildError(`Cannot get meta type for this value: ${type}`, AnyOfImpl)

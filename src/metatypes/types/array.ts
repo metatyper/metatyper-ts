@@ -1,9 +1,10 @@
 import { MetaType, MetaTypeFlag, PrepareBaseType } from '../metatype'
 import { MetaTypeImpl, MetaTypeArgs } from '../metatypeImpl'
+import { metaTypesSchemaToValue } from '../../utils/meta'
 import { NotEmptyArray } from '../../validators/notEmptyArray.validator'
 
-import { ANY } from './any'
-import { ANY_OF } from './anyOf'
+import { AnyImpl } from './any'
+import { AnyOfImpl } from './anyOf'
 
 type ArrayMetaTypeArgs = {
     notEmpty?: boolean
@@ -15,26 +16,45 @@ export class ArrayImpl extends MetaTypeImpl {
 
     configure(args?: MetaTypeArgs & ArrayMetaTypeArgs) {
         const notEmpty = args?.notEmpty
-        const validators = notEmpty
-            ? [...(args?.validators || []), NotEmptyArray]
-            : [...(args?.validators || [])]
-
-        let subType: any = args?.subType || args?.default
+        let subType: any = this.subType || this.default
 
         if (Array.isArray(subType)) {
             if (subType.length === 1) {
-                subType = MetaTypeImpl.getMetaType(subType[0])
+                subType = MetaTypeImpl.getMetaTypeImpl(subType[0], args?.subTypesDefaultArgs)
             } else if (subType.length > 1) {
-                subType = ANY_OF(subType)
+                if (args?.subTypesDefaultArgs instanceof Function) {
+                    subType = AnyOfImpl.build((metaTypeImpl) => {
+                        const argsFunc = args?.subTypesDefaultArgs as (impl: MetaTypeImpl) => any
+                        const subArgs = argsFunc(metaTypeImpl) || {}
+
+                        return {
+                            ...subArgs,
+                            subType
+                        }
+                    })
+                } else {
+                    subType = AnyOfImpl.build({
+                        ...(args?.subTypesDefaultArgs || {}),
+                        subType
+                    })
+                }
             } else {
-                subType = ANY()
+                subType = AnyImpl.build(args?.subTypesDefaultArgs)
             }
         } else {
-            subType = MetaTypeImpl.getMetaType(subType)
+            subType = MetaTypeImpl.getMetaTypeImpl(subType, args?.subTypesDefaultArgs)
         }
 
-        this.subType = MetaType.getMetaImpl(subType) || ANY()
+        this.subType = subType || AnyImpl.build(args?.subTypesDefaultArgs)
+
+        this.default = metaTypesSchemaToValue(this.default)
+
+        const validators = notEmpty
+            ? [...(this.validators || []), NotEmptyArray]
+            : [...(this.validators || [])]
+
         this.validators = validators
+
         this.schema = {
             type: 'array',
             items: this.subType.schema,

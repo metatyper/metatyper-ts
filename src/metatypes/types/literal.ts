@@ -7,10 +7,14 @@ export class LiteralImpl extends MetaTypeImpl {
 
     configure(args?: MetaTypeArgs) {
         this.schema = {
-            const: args?.subType
+            const: this?.subType
         }
 
         if (args?.default === undefined) this.default = this.subType
+    }
+
+    toString() {
+        return `${this.name}<${this.subType}>`
     }
 
     isMetaTypeOf(type: any) {

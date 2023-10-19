@@ -1,4 +1,11 @@
-import { AnyImpl, MetaType, MetaTypeFlag, MetaTypeImpl, SchemaType } from './metatypes'
+import {
+    AnyImpl,
+    MetaType,
+    MetaTypeArgs,
+    MetaTypeFlag,
+    MetaTypeImpl,
+    SchemaType
+} from './metatypes'
 import { isClass } from './utils/classes'
 
 export const IsMetaObjectSymbol = Symbol('[[IsMetaObject]]')
@@ -9,7 +16,7 @@ export const MetaObjectSerializationIsActiveSymbol = Symbol('[[MetaObjectSeriali
 export const MetaObjectInitialDeclarationsSymbol = Symbol('[[MetaObjectInitialDeclarations]]')
 export const MetaObjectDeclarationSymbol = Symbol('[[MetaObjectDeclaration]]')
 export const MetaObjectValuesSymbol = Symbol('[[MetaObjectValues]]')
-export const MetaObjectForPropsSymbol = Symbol('[[MetaObjectForProps]]')
+export const MetaObjectTypesDefaultArgsSymbol = Symbol('[[MetaObjectTypesDefaultArgs]]')
 
 /**
  * Meta args
@@ -20,6 +27,7 @@ export const MetaObjectForPropsSymbol = Symbol('[[MetaObjectForProps]]')
  * @param disableSerialization - disable all serializers
  * @param disableInheritance - the meta object will not have a prototype
  * @param instanceArgs - MetaArgs for configuring function/class meta instances
+ * @param metaTypesArgs - MetaTypeArgs for configuring all Meta types
  */
 export type MetaArgs = {
     name?: string
@@ -28,6 +36,7 @@ export type MetaArgs = {
     disableSerialization?: boolean
     disableInheritance?: boolean
     instanceArgs?: MetaArgs
+    metaTypesDefaultArgs?: MetaTypeArgs | ((metaTypeImpl: MetaTypeImpl) => MetaTypeArgs)
 }
 
 export function isMetaObject(obj: object) {
@@ -87,11 +96,24 @@ function initMetaObject(targetObject: object, origObj: object) {
 
             let declaration: MetaTypeImpl = null
 
-            if (MetaType.isMetaType(descriptor.value)) {
+            const defaultMetaTypeArgs = targetObject[MetaObjectTypesDefaultArgsSymbol] || {}
+
+            if (descriptor.value instanceof MetaTypeImpl) {
+                declaration = descriptor.value.rebuild(defaultMetaTypeArgs)
+
+                descriptor.value = declaration?.default ?? null
+            } else if (MetaType.isMetaType(descriptor.value)) {
                 declaration = MetaType.getMetaImpl(descriptor.value)
+
+                if (defaultMetaTypeArgs) {
+                    declaration = declaration.rebuild(defaultMetaTypeArgs)
+                }
+
                 descriptor.value = declaration?.default ?? null
             } else {
-                declaration = MetaTypeImpl.getMetaTypeImpl(descriptor.value)
+                declaration = MetaTypeImpl.getMetaTypeImpl(descriptor.value, defaultMetaTypeArgs)
+
+                if (declaration) descriptor.value = declaration.default
             }
 
             if (doSerialize && declaration) {
@@ -123,7 +145,9 @@ function addDeclaration(obj: object, propName: string, propValue: any, rewrite =
     }
 
     if (!declarations[propName] || rewrite) {
-        const declaration = MetaTypeImpl.getMetaTypeImpl(propValue) || AnyImpl.build()
+        const args = obj[MetaObjectTypesDefaultArgsSymbol] || {}
+
+        const declaration = MetaTypeImpl.getMetaTypeImpl(propValue, args) || AnyImpl.build(args)
 
         declarations[propName] = declaration
     }
@@ -228,12 +252,14 @@ function setMetaObjectValue(obj: object, propName: string, propValue: any) {
     }
 
     if (!declaration) {
+        const args = obj[MetaObjectTypesDefaultArgsSymbol] || {}
+
         if (descriptor && descriptor.value !== undefined) {
-            declaration = MetaTypeImpl.getMetaTypeImpl(descriptor?.value)
+            declaration = MetaTypeImpl.getMetaTypeImpl(descriptor?.value, args)
         }
 
         if (!declaration) {
-            declaration = MetaTypeImpl.getMetaTypeImpl(propValue)
+            declaration = MetaTypeImpl.getMetaTypeImpl(propValue, args)
         }
     }
 
@@ -566,6 +592,10 @@ export function Meta<T extends object>(base?: T, metaArgs?: MetaArgs): T {
         writable: true
     })
 
+    Object.defineProperty(newObj, MetaObjectTypesDefaultArgsSymbol, {
+        value: metaArgs?.metaTypesDefaultArgs
+    })
+
     Object.defineProperty(newObj, Symbol.for('nodejs.util.inspect.custom'), {
         value: function toString() {
             return metaObjectToString(this)
@@ -754,6 +784,10 @@ Meta.serialize = (obj: object) => {
 }
 
 Meta.deserialize = (obj: object, raw: object) => {
+    if (!isMetaObject(obj)) {
+        obj = Meta(obj)
+    }
+
     const doValidate = obj[MetaObjectValidationIsActiveSymbol] || false
     const doSerialize = obj[MetaObjectSerializationIsActiveSymbol] || false
     const objDeclarations = getMetaObjectDeclarations(obj)

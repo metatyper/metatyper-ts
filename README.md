@@ -304,6 +304,9 @@ type MetaArgs = {
 
     // The Meta object will not have a prototype
     disableInheritance?: boolean
+
+    // MetaTypeArgs for configuring all Meta types
+    metaTypesDefaultArgs?: MetaTypeArgs | ((metaTypeImpl: MetaTypeImpl) => MetaTypeArgs)
 }
 ```
 
@@ -613,7 +616,7 @@ static isCompatible(_value: any) {
 ```ts
 // score to sort registered compatible Meta type implementations in getMetaType
 // for example, you can register a new implementation for the built-in string
-static getCompatibilityScore(_value: any, _args?: MetaTypeArgs) {
+static getCompatibilityScore(_value: any) {
     return -1
 }
 ```
@@ -680,11 +683,14 @@ type MetaTypeArgs<T = any> = {
     // that the Meta type implementation instance has in the defaultSerializers property
     noDefaultSerializers?: boolean  
 
-     // disable the validators, which all Meta types have (MetaTypeValidator)
+    // disable the validators, which all Meta types have (MetaTypeValidator)
     noBuiltinValidators?: boolean 
 
-     // disable serializers, which all Meta types have (AutoCast)
+    // disable serializers, which all Meta types have (AutoCast)
     noBuiltinSerializers?: boolean 
+
+    // default arguments used to build all subtypes (could be a function)
+    subTypesDefaultArgs?: MetaTypeArgs | ((metaTypeImpl: MetaTypeImpl) => MetaTypeArgs)
 }
 ```
 
