@@ -36,6 +36,7 @@ More Facts:
   - [Basic usage](#basic-usage)
   - [Meta objects](#meta-objects)
     - [Meta](#meta)
+    - [Meta.isMetaObject](#metaismetaobject)
     - [Meta.Class decorator](#metaclass-decorator)
     - [Meta args](#meta-args)
     - [Meta inheritance](#meta-inheritance)
@@ -252,6 +253,12 @@ const metaInstanceA = new MetaA()
 // will throw a validation error because this property was initialized String ('string')
 metaInstanceA['a'] = 1 
 ```
+
+<br/>
+
+#### Meta.isMetaObject
+
+If you need to check if an object is a meta object, you can use this method: `Meta.isMetaObject(obj)`
 
 <br/>
 

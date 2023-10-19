@@ -728,6 +728,8 @@ Meta.Class = (args?: MetaArgs) => {
     }
 }
 
+Meta.isMetaObject = isMetaObject
+
 Meta.validationIsActive = (obj: object) => {
     return obj[MetaObjectValidationIsActiveSymbol] ?? false
 }
