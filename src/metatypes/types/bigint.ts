@@ -7,10 +7,6 @@ export class BigIntImpl extends MetaTypeImpl {
     schema: SchemaType = { type: 'string', pattern: '^([-+]?[0-9]+)$' }
 
     castToType({ value }) {
-        if (value === BigInt) {
-            return null
-        }
-
         if (
             typeof value === 'boolean' ||
             (typeof value === 'string' && /^([-+]?[0-9]+)$/.test(value))
@@ -34,7 +30,7 @@ export class BigIntImpl extends MetaTypeImpl {
     }
 
     static isCompatible(value: any) {
-        return typeof value === 'bigint' || value === BigInt
+        return typeof value === 'bigint'
     }
 
     static getCompatibilityScore(_value: any) {

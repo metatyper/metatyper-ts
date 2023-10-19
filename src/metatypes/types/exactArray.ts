@@ -90,7 +90,7 @@ export type EXACT_ARRAY<T extends any[]> = MetaType<T, ExactArrayImpl, T>
  *
  * @example
  * ```ts
- * const obj1 = Meta({ a: EXACT_ARRAY([1, String, BOOLEAN()]) }) // as { a : [number, string, boolean] }
+ * const obj1 = Meta({ a: EXACT_ARRAY([1, 'string', BOOLEAN()]) }) // as { a : [number, string, boolean] }
  * obj1.a = [1, 'str', true]
  * // obj1.a = [1, true, 'str'] -> type & validation error
  * // obj1.a = [1] -> type & validation error

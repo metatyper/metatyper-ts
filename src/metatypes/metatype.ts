@@ -4,20 +4,8 @@ export const IsMetaTypeSymbol = Symbol('IsMetaType')
 
 export type PrepareBaseType<T> = T extends MetaTypeFlag
     ? T
-    : T extends StringConstructor
-    ? string
-    : T extends NumberConstructor
-    ? number
-    : T extends BooleanConstructor
-    ? boolean
-    : T extends DateConstructor
-    ? Date
     : T extends Date
-    ? Date
-    : T extends BigIntConstructor
-    ? bigint
-    : T extends new (...args: any[]) => infer U
-    ? U
+    ? T
     : T extends []
     ? []
     : T extends (infer U)[]

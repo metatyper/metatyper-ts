@@ -434,7 +434,9 @@ export class MetaTypeImpl {
             }
         }
 
-        if (!maxCompatibilityScoreTypeImplCls) return null
+        if (!maxCompatibilityScoreTypeImplCls) {
+            maxCompatibilityScoreTypeImplCls = AnyImpl
+        }
 
         if (args instanceof Function) {
             const argsFunc = args as (_metaTypeImpl: MetaTypeImpl) => MetaTypeArgs
@@ -457,3 +459,4 @@ export class MetaTypeImpl {
 }
 
 import { MetaType } from './metatype'
+import { AnyImpl } from './types/any'

@@ -25,7 +25,7 @@ class ClassForBenchmark3 {
         default: 1
     })
     obj = OBJECT({
-        a: String
+        a: 'string'
     })
     lit = LITERAL('1')
 }

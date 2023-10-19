@@ -7,10 +7,6 @@ export class DateImpl extends MetaTypeImpl {
     schema: SchemaType = { type: 'number' }
 
     castToType({ value }) {
-        if (value === Date) {
-            return null
-        }
-
         if (typeof value === 'number') {
             return new Date(value)
         }
@@ -23,11 +19,11 @@ export class DateImpl extends MetaTypeImpl {
     }
 
     static isCompatible(value: any) {
-        return value instanceof Date || (Number.isFinite(value) && value >= 0) || value === Date
+        return value instanceof Date || (Number.isFinite(value) && value >= 0)
     }
 
     static getCompatibilityScore(value: any): number {
-        return value instanceof Date || value === Date ? 1 : 0
+        return value instanceof Date ? 1 : 0
     }
 }
 

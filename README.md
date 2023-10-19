@@ -144,10 +144,7 @@ const PositiveNumberValidator = {
 
 const obj1 = Meta({
     id: 0, // will use Meta type: NUMBER
-
-    // yes, you can use StringConstructor or similar built-ins as Meta type declaration
-    username: String,
-
+    username: '',
     stars: NUMBER({
         default: 1,
         validators: [PositiveNumberValidator]
@@ -222,13 +219,13 @@ const objA = {
 }
 const metaObjA = Meta(objA)
 
-// will throw a validation error because this property has been initialized Number
+// will throw a validation error because this property has been initialized number
 metaObjA['a'] = 'str' 
 
 const metaObjB = Meta()
 metaObjB['a'] = 'str'
 
-// will throw a validation error because this property has been initialized String
+// will throw a validation error because this property has been initialized string
 metaObjB['a'] = 2 
 ```
 
@@ -245,12 +242,12 @@ class A {
 
 const MetaA = Meta(A)  // similar to the @Meta.Class() decorator
 
-// will throw a validation error because this property was initialized Number
+// will throw a validation error because this property was initialized number
 MetaA['a'] = 'str' 
 
 const metaInstanceA = new MetaA()
 
-// will throw a validation error because this property was initialized String ('string')
+// will throw a validation error because this property was initialized 'string'
 metaInstanceA['a'] = 1 
 ```
 
@@ -276,12 +273,12 @@ class MetaA {
     static a = 2
 }
 
-// will throw a validation error because this property was initialized Number
+// will throw a validation error because this property was initialized number
 MetaA['a'] = 'str'
 
 const metaInstanceA = new MetaA()
 
-// will throw a validation error because this property was initialized String ('string')
+// will throw a validation error because this property was initialized 'string'
 metaInstanceA['a'] = 1
 ```
 
@@ -664,8 +661,7 @@ type MetaTypeArgs<T = any> = {
      // (you can get the entire schema of an object by calling Meta.getJsonSchema(obj))
     schema?: SchemaType 
 
-    // this is sub value / Meta type used for nested object types 
-    // (e.g. [String] => string[], where String is subType)
+    // this is sub value / Meta type used for nested object types
     subType?: any 
 
     // default value (instead of null)
@@ -736,7 +732,7 @@ let someVar: ANY  // this is equal to `any`
 import { ANY_OF, BOOLEAN } from 'metatyper' 
 
 const obj = Meta({ 
-    someField: ANY_OF([1, String, BOOLEAN()], {/*MetaTypeArgs*/})
+    someField: ANY_OF([1, 'string', BOOLEAN()], {/*MetaTypeArgs*/})
 })
 /*
 obj type is equal to 
@@ -759,7 +755,7 @@ import { ARRAY, BOOLEAN } from 'metatyper'
 
 const obj = Meta({ 
     someField: ARRAY(
-        [1, String, BOOLEAN()], 
+        [1, 'string', BOOLEAN()], 
         { notEmpty: true, /*MetaTypeArgs*/}
     ),
     anotherField: ARRAY(BOOLEAN(), {/*MetaTypeArgs*/}),
@@ -787,7 +783,7 @@ import { EXACT_ARRAY, BOOLEAN } from 'metatyper'
 
 
 const obj = Meta({ 
-    someField: EXACT_ARRAY([1, String, BOOLEAN()], {/*MetaTypeArgs*/})
+    someField: EXACT_ARRAY([1, 'string', BOOLEAN()], {/*MetaTypeArgs*/})
 })
 /*
 obj type is equal to 
@@ -810,7 +806,7 @@ import { OBJECT, BOOLEAN } from 'metatyper'
 const obj = Meta({ 
     someField: OBJECT({
         a: 1,
-        b: String,
+        b: 'string',
         c: BOOLEAN(),
         d: {
             e: 'string'

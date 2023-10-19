@@ -74,10 +74,6 @@ export class ArrayImpl extends MetaTypeImpl {
     }
 
     castToType({ value, ...args }) {
-        if ((value as any) === Array) {
-            return null
-        }
-
         return value?.map((item: any) =>
             this.subType.castToType({ ...args, value: item, metaTypeImpl: this.subType })
         )
@@ -90,7 +86,7 @@ export class ArrayImpl extends MetaTypeImpl {
     }
 
     static isCompatible(value: any): boolean {
-        return Array.isArray(value) || value === Array
+        return Array.isArray(value)
     }
 
     static getCompatibilityScore(_value: any) {
@@ -108,7 +104,7 @@ export type ARRAY<T> = MetaType<T[], ArrayImpl>
  *
  * @example
  * ```ts
- * const obj1 = Meta({ a: ARRAY([1, String, BOOLEAN()]) }) // as { a : (number | string | boolean)[] }
+ * const obj1 = Meta({ a: ARRAY([1, 'string', BOOLEAN()]) }) // as { a : (number | string | boolean)[] }
  * obj1.a = [1]
  * obj1.a = [1, 'str']
  * obj1.a = [true, 1]
@@ -118,7 +114,7 @@ export type ARRAY<T> = MetaType<T[], ArrayImpl>
  * obj2 = [false, 1, 'str']
  * // obj2 = {} -> type error
  *
- * const obj3 = Meta({ a: ARRAY(Number) }) // as { a : number[] }
+ * const obj3 = Meta({ a: ARRAY(NUMBER()) }) // as { a : number[] }
  * obj3.a = [1]
  * // obj3.a = ['str'] -> type & validation error
  * // TODO: obj3.push('str') -> validation error or not

@@ -7,10 +7,6 @@ export class StringImpl extends MetaTypeImpl {
     schema: SchemaType = { type: 'string' }
 
     castToType({ value }) {
-        if (value === String) {
-            return null
-        }
-
         if (typeof value === 'number') {
             return String(value)
         }
@@ -27,7 +23,7 @@ export class StringImpl extends MetaTypeImpl {
     }
 
     static isCompatible(value: any) {
-        return typeof value === 'string' || value === String
+        return typeof value === 'string'
     }
 
     static getCompatibilityScore(_value: any) {

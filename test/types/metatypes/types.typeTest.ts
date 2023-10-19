@@ -74,9 +74,9 @@ TypeIsEqual({} as unknown, ANY(), true)
 TypeIsEqual({} as never, ANY(), false)
 TypeIsEqual(ANY() as ANY, ANY(), true)
 
-const anOf1 = ANY_OF([1, String])
-const anOf2 = ANY_OF([Number, 'String'])
-const anOf3 = ANY_OF([NUMBER(), STRING()])
+const anOf1 = ANY_OF([1, 'string'])
+const anOf2 = ANY_OF([NUMBER(), 'string'])
+const anOf3 = ANY_OF([3, STRING()])
 
 TypeIsEqual<number | string, typeof anOf1>(true)
 TypeIsEqual<number | string, typeof anOf2>(true)
@@ -86,8 +86,8 @@ TypeExtends<string, typeof anOf1>(true)
 TypeExtends<typeof anOf1, string>(true)
 TypeIsEqual<ANY_OF<string | number>, typeof anOf1>(true)
 
-const arT1 = ARRAY([String, NUMBER(), true])
-const arT2 = ARRAY(['String'])
+const arT1 = ARRAY(['string', NUMBER(), true])
+const arT2 = ARRAY(['string'])
 const arT3 = ARRAY([STRING()])
 const arT4 = ARRAY(NUMBER())
 
@@ -98,8 +98,8 @@ TypeIsEqual<number[], typeof arT4>(true)
 TypeIsEqual<string[], typeof arT4>(false)
 TypeIsEqual<ARRAY<number | string | boolean>, typeof arT1>(true)
 
-const arrEx1 = EXACT_ARRAY([1, String])
-const arrEx2 = EXACT_ARRAY(['String', Number])
+const arrEx1 = EXACT_ARRAY([1, STRING()])
+const arrEx2 = EXACT_ARRAY(['string', NUMBER()])
 const arrEx3 = EXACT_ARRAY([NUMBER(), STRING()])
 
 TypeIsEqual<[number, string], typeof arrEx1>(true)
@@ -111,11 +111,11 @@ TypeIsEqual<EXACT_ARRAY<[number, string]>, typeof arrEx1>(true)
 TypeIsEqual<EXACT_ARRAY<[number, string]>, typeof arrEx2>(false)
 
 TypeIsEqual({ a: 'string' }, OBJECT({ a: '1' }), true)
-TypeIsEqual({ a: 'string' }, OBJECT({ a: String }), true)
+TypeIsEqual({ a: 'string' }, OBJECT({ a: 'string' }), true)
 TypeIsEqual({ a: 'string' }, OBJECT({ a: STRING() }), true)
 TypeIsEqual({ a: 1 as number }, OBJECT({ a: '1' }), false)
 TypeIsEqual({ a: 'string' }, OBJECT({ b: 'string' }), false)
-TypeIsEqual({ a: 'string' } as OBJECT<{ a: string }>, OBJECT({ a: String }), true)
+TypeIsEqual({ a: 'string' } as OBJECT<{ a: string }>, OBJECT({ a: 'string' }), true)
 
 const lit = LITERAL(1 as const)
 

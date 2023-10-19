@@ -7,6 +7,7 @@ import {
     MetaTypeFlag,
     type MetaType
 } from '../../../src/metatypes/metatype'
+import { STRING, DATE, NUMBER } from '../../../src/metatypes'
 
 // Test MetaType
 
@@ -14,7 +15,7 @@ TypeExtends<{ [IsMetaTypeSymbol]: true }, MetaTypeFlag>(true)
 TypeExtends<{ [IsMetaTypeSymbol]: false }, MetaTypeFlag>(false)
 
 const _type = {
-    a: [1, String, Date] as const
+    a: [1, STRING(), DATE()] as const
 }
 const _typeValue = {
     a: [1, '2', new Date()] as const
@@ -53,21 +54,14 @@ TypeExtends<
 // Test PrepareType
 
 TypeIsEqual<PrepareBaseType<MetaTypeFlag>, MetaTypeFlag>(true)
-TypeIsEqual<PrepareBaseType<typeof String>, string>(true)
-TypeIsEqual<PrepareBaseType<StringConstructor>, string>(true)
 TypeIsEqual<PrepareBaseType<string>, string>(true)
 TypeIsEqual<PrepareBaseType<''>, ''>(true)
-TypeIsEqual<PrepareBaseType<typeof Number>, number>(true)
-TypeIsEqual<PrepareBaseType<NumberConstructor>, number>(true)
 TypeIsEqual<PrepareBaseType<number>, number>(true)
 TypeIsEqual<PrepareBaseType<1>, 1>(true)
-TypeIsEqual<PrepareBaseType<BooleanConstructor>, boolean>(true)
 TypeIsEqual<PrepareBaseType<boolean>, boolean>(true)
 TypeIsEqual<PrepareBaseType<true>, true>(true)
 TypeIsEqual<PrepareBaseType<false>, false>(true)
-TypeIsEqual<PrepareBaseType<DateConstructor>, Date>(true)
 TypeIsEqual<PrepareBaseType<Date>, Date>(true)
-TypeIsEqual<PrepareBaseType<BigIntConstructor>, bigint>(true)
 TypeIsEqual<PrepareBaseType<bigint>, bigint>(true)
 TypeIsEqual<PrepareBaseType<1n>, 1n>(true)
 
@@ -75,7 +69,6 @@ class TestA {
     a: number = 1
 }
 
-TypeIsEqual({} as PrepareBaseType<typeof TestA>, new TestA(), true)
 TypeIsEqual({} as PrepareBaseType<TestA>, new TestA(), true)
 
 TypeIsEqual<PrepareBaseType<[]>, []>(true)
@@ -89,11 +82,11 @@ TypeIsEqual<
         readonly [
             number,
             readonly [
-                typeof String,
-                number,
+                STRING,
+                NUMBER,
                 [3],
                 {
-                    a: typeof String
+                    a: STRING
                 }
             ]
         ]
@@ -113,7 +106,7 @@ TypeIsEqual<
                 d: number
             }
         }
-        b: typeof String
+        b: STRING
     }>,
     {
         a: {

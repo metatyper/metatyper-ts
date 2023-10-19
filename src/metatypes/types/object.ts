@@ -79,19 +79,8 @@ export class ObjectImpl extends MetaTypeImpl {
         )
     }
 
-    castToType({ value }) {
-        if (value === Object) {
-            return null
-        }
-
-        return value
-    }
-
     static isCompatible(value: any) {
-        return (
-            (typeof value === 'object' && !Array.isArray(value) && value !== null) ||
-            value === Object
-        )
+        return typeof value === 'object' && !Array.isArray(value) && value !== null
     }
 
     static getCompatibilityScore(_value: any) {
@@ -109,7 +98,7 @@ export type OBJECT<T extends object> = MetaType<T, ObjectImpl>
  *
  * @example
  * ```ts
- * const obj1 = Meta({ a: OBJECT({ a1: 1, a2: String, a3: [BOOLEAN()] }) }) // as { a : { a1: number, a2: string, a3: boolean[] } }
+ * const obj1 = Meta({ a: OBJECT({ a1: 1, a2: 'string', a3: [BOOLEAN()] }) }) // as { a : { a1: number, a2: string, a3: boolean[] } }
  * obj1.a = { a1: 1, a2: 'str', a3: [true, false] }
  * // obj1.a = { a1: 1, a2: 'str', a3: [true, false, 1] } -> type & validation error
  *

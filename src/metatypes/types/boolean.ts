@@ -7,10 +7,6 @@ export class BooleanImpl extends MetaTypeImpl {
     schema: SchemaType = { type: 'boolean' }
 
     castToType({ value }) {
-        if (value === Boolean) {
-            return null
-        }
-
         if (value === 0) {
             return false
         }
@@ -23,7 +19,7 @@ export class BooleanImpl extends MetaTypeImpl {
     }
 
     static isCompatible(value: any) {
-        return typeof value === 'boolean' || value === Boolean
+        return typeof value === 'boolean'
     }
 
     static getCompatibilityScore(_value: any) {

@@ -66,7 +66,7 @@ export type ANY_OF<T> = MetaType<T, AnyOfImpl>
  *
  * @example
  * ```ts
- * const obj1 = Meta({ a: ANY_OF([1, String, BOOLEAN()]) }) // as { a : number | string | boolean }
+ * const obj1 = Meta({ a: ANY_OF([1, 'string', BOOLEAN()]) }) // as { a : number | string | boolean }
  * obj1.a = 1
  * obj1.a = 'str'
  * obj1.a = true

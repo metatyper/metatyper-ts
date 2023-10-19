@@ -7,16 +7,8 @@ export class NumberImpl extends MetaTypeImpl {
 
     schema: SchemaType = { type: 'number' }
 
-    castToType({ value }) {
-        if (value === Number) {
-            return null
-        }
-
-        return value
-    }
-
     static isCompatible(value: any) {
-        return typeof value === 'number' || value === Number
+        return typeof value === 'number'
     }
 
     static getCompatibilityScore(_value: any) {

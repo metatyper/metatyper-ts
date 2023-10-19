@@ -162,7 +162,7 @@ describe('MetaType and MetaTypeImpl', () => {
     })
 
     test('ANY_OF', () => {
-        const metaType = ANY_OF([1n, NUMBER(), String, true])
+        const metaType = ANY_OF([1n, NUMBER(), 'string', true])
         const metaTypeImpl = MetaType.getMetaImpl(metaType)
 
         expect(MetaType.isMetaType(metaType)).toBe(true)
@@ -201,7 +201,7 @@ describe('MetaType and MetaTypeImpl', () => {
     })
 
     test('ARRAY', () => {
-        const metaType = ARRAY([1n, NUMBER(), String, true], {
+        const metaType = ARRAY([1n, NUMBER(), 'string', true], {
             notEmpty: true
         })
         const metaTypeImpl = MetaType.getMetaImpl(metaType)
@@ -247,7 +247,7 @@ describe('MetaType and MetaTypeImpl', () => {
     })
 
     test('EXACT_ARRAY', () => {
-        const metaType = EXACT_ARRAY([1n, NUMBER(), String, true])
+        const metaType = EXACT_ARRAY([1n, NUMBER(), 'string', true])
         const metaTypeImpl = MetaType.getMetaImpl(metaType)
 
         expect(MetaType.isMetaType(metaType)).toBe(true)
@@ -285,7 +285,7 @@ describe('MetaType and MetaTypeImpl', () => {
 
     test('OBJECT', () => {
         const metaType = OBJECT({
-            a: String,
+            a: 'string',
             b: NUMBER()
         })
         const metaTypeImpl = MetaType.getMetaImpl(metaType)
