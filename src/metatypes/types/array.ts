@@ -1,6 +1,6 @@
 import { MetaType, MetaTypeFlag, PrepareBaseType } from '../metatype'
 import { MetaTypeImpl, MetaTypeArgs } from '../metatypeImpl'
-import { metaTypesSchemaToValue } from '../../utils/meta'
+import { metaTypesSchemaToValue } from '../../utils/deepObjects'
 import { NotEmptyArray } from '../../validators/notEmptyArray.validator'
 
 import { AnyImpl } from './any'

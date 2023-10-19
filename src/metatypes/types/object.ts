@@ -1,7 +1,7 @@
 import { MetaType, PrepareBaseType } from '../metatype'
 import { MetaTypeImpl, MetaTypeArgs, SchemaType } from '../metatypeImpl'
 import { TypeBuildError } from '../../errors/typeBuild.error'
-import { metaTypesSchemaToValue } from '../../utils/meta'
+import { metaTypesSchemaToValue } from '../../utils/deepObjects'
 import { AnyImpl } from './any'
 
 @MetaTypeImpl.registerMetaType

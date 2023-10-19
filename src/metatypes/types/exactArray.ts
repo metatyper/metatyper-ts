@@ -1,6 +1,6 @@
 import { MetaType, PrepareBaseType } from '../metatype'
 import { MetaTypeImpl, MetaTypeArgs } from '../metatypeImpl'
-import { metaTypesSchemaToValue } from '../../utils/meta'
+import { metaTypesSchemaToValue } from '../../utils/deepObjects'
 import { TypeBuildError } from '../../errors/typeBuild.error'
 
 export class ExactArrayImpl extends MetaTypeImpl {
