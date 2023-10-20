@@ -16,11 +16,11 @@ function isNotPlainObject(obj: any) {
     return false
 }
 
-export function objectDeepMap(obj: object, processFunc: (obj: object) => any) {
+export function objectDeepMap(obj: object, processFunc: (value: any, obj: object) => any) {
     const objectsMap = new WeakMap()
 
     if (isNotPlainObject(obj)) {
-        return processFunc(obj)
+        return processFunc(obj, obj)
     }
 
     function deepCopyAndResolveCycles() {
@@ -30,7 +30,7 @@ export function objectDeepMap(obj: object, processFunc: (obj: object) => any) {
 
         let circularIndex = 1
 
-        const newObj = {}
+        const newObj = Array.isArray(obj) ? [] : {}
 
         newObj[DeepMapSourceRefSymbol] = {
             index: null,
@@ -48,7 +48,7 @@ export function objectDeepMap(obj: object, processFunc: (obj: object) => any) {
             Object.entries<any>(origObj).forEach(([key, value]) => {
                 if (!isNotPlainObject(value)) {
                     if (!objectsMap.has(value)) {
-                        const newValue = {}
+                        const newValue = Array.isArray(value) ? [] : {}
 
                         newValue[DeepMapSourceRefSymbol] = {
                             index: null,
@@ -87,14 +87,20 @@ export function objectDeepMap(obj: object, processFunc: (obj: object) => any) {
         }
 
         if (isNotPlainObject(curObj)) {
-            return processFunc(curObj)
+            return processFunc(curObj, objCopy)
         }
 
-        Object.entries<any>(curObj).forEach(([key, value]) => {
-            curObj[key] = deepProcess(value)
-        })
+        if (Array.isArray(curObj)) {
+            curObj.forEach((value, i) => {
+                curObj[i] = deepProcess(value)
+            })
+        } else {
+            Object.entries<any>(curObj).forEach(([key, value]) => {
+                curObj[key] = deepProcess(value)
+            })
+        }
 
-        return processFunc(curObj)
+        return processFunc(curObj, objCopy)
     }
 
     return deepProcess(objCopy)
@@ -134,6 +140,12 @@ export function metaTypesSchemaToValue(obj: object) {
 
 export function inspectMetaValue(value: any) {
     return objectDeepMap(value, (value) => {
+        const circularRef = objectDeepMap.circularRef(value)
+
+        if (circularRef) {
+            return `[Circular *${circularRef.index}]`
+        }
+
         if (typeof value === 'string') {
             return `'${value}'`
         }
@@ -162,29 +174,31 @@ export function inspectMetaValue(value: any) {
             return `${value}`
         }
 
-        if (Array.isArray(value)) {
-            return `[${value.join(', ')}]`
-        }
-
         if (value instanceof Object) {
-            const circularRef = objectDeepMap.circularRef(value)
-
-            if (circularRef) {
-                return `[Circular *${circularRef.index}]`
-            }
-
-            const objOwnPropsStrings = Object.entries(value)
-                .sort(([key1], [key2]) => key1.localeCompare(key2))
-                .map(([name, value]) => {
-                    return `${name}: ${value}`
-                })
-
             const sourceRef = objectDeepMap.sourceRef(value)
 
-            if (sourceRef) {
-                return `<ref *${sourceRef.index}> { ${objOwnPropsStrings.join(', ')} }`
+            if (Array.isArray(value)) {
+                const arrayStrings = value.map((value) => {
+                    return `${value}`
+                })
+
+                if (sourceRef) {
+                    return `<ref *${sourceRef.index}> [ ${arrayStrings.join(', ')} ]`
+                } else {
+                    return `[ ${arrayStrings.join(', ')} ]`
+                }
             } else {
-                return `{ ${objOwnPropsStrings.join(', ')} }`
+                const objOwnPropsStrings = Object.entries(value)
+                    .sort(([key1], [key2]) => key1.localeCompare(key2))
+                    .map(([name, value]) => {
+                        return `${name}: ${value}`
+                    })
+
+                if (sourceRef) {
+                    return `<ref *${sourceRef.index}> { ${objOwnPropsStrings.join(', ')} }`
+                } else {
+                    return `{ ${objOwnPropsStrings.join(', ')} }`
+                }
             }
         }
 
