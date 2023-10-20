@@ -73,7 +73,6 @@ More Facts:
     - [TypeBuildError](#typebuilderror)
 - [Similar libraries](#similar-libraries)
 - [Changelog](#changelog)
-  - [metatyper@0.1.0](#metatyper010)
 - [ToDo](#todo)
 
 <br/>
@@ -1384,14 +1383,10 @@ These libs are worth a look:
 
 ## Changelog
 
-### metatyper@0.1.0
-
-- Init release
+View the changelog at [CHANGELOG.md](CHANGELOG.md)
 
 <br/>
 
 ## ToDo
 
-1. implement more popular validators and serializers.
-2. implement additional tests.
-3. rewrite docs.
+View the todo list at [TODO.md](TODO.md)
