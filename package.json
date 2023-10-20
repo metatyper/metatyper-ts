@@ -52,15 +52,16 @@
         "/index.d.ts"
     ],
     "scripts": {
-        "build": "rimraf ./lib && tsc --pretty --project ./tsconfig.build.json && rollup -c",
-        "build:tsc": "rimraf ./lib && tsc --pretty --project ./tsconfig.build.json",
-        "build:rollup": "rimraf ./lib && rollup -c",
+        "sandbox": "ts-node dev/sandbox.ts",
         "lint": "prettier --check \"./src/**/*.ts\"",
         "lint:fix": "prettier --write \"./src/**/*.ts\"",
-        "test:benchmark": "ts-node test/benchmark/index.ts",
-        "test:types": "tsc --noEmit --project ./tsconfig.test.json",
+        "test:types": "tsc --noEmit --project  ./tsconfig.json",
         "test:jest": "jest",
-        "test": "yarn lint && yarn test:types && yarn test:jest"
+        "test": "yarn lint && yarn test:types && yarn test:jest",
+        "build": "rimraf ./lib && yarn build:tsc && yarn build:rollup",
+        "build:tsc": "rimraf ./lib && tsc --pretty --project ./tsconfig.build.json",
+        "build:rollup": "rimraf ./lib && rollup -c",
+        "benchmark": "ts-node test/benchmark/index.ts"
     },
     "devDependencies": {
         "json-schema": "^0.4.0",
