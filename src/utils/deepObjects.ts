@@ -1,7 +1,7 @@
 const DeepMapSourceRefSymbol = Symbol('DeepMapSourceRef')
 const DeepMapCircularRefSymbol = Symbol('DeepMapCircularRef')
 
-function isNotPlainObject(obj: any) {
+export function isNotPlainObject(obj: any) {
     if (
         !(obj instanceof Object) ||
         MetaType.isMetaType(obj) ||
@@ -82,12 +82,12 @@ export function objectDeepMap(obj: object, processFunc: (value: any, obj: object
     const objCopy = deepCopyAndResolveCycles()
 
     function deepProcess(curObj: any) {
-        if (!curObj[DeepMapSourceRefSymbol]?.index) {
-            delete curObj[DeepMapSourceRefSymbol]
-        }
-
         if (isNotPlainObject(curObj)) {
             return processFunc(curObj, objCopy)
+        }
+
+        if (!curObj[DeepMapSourceRefSymbol]?.index) {
+            delete curObj[DeepMapSourceRefSymbol]
         }
 
         if (Array.isArray(curObj)) {
@@ -112,7 +112,12 @@ objectDeepMap.circularRef = (
     source: object
     index: number
 } => {
-    return Object.getOwnPropertyDescriptor(obj, DeepMapCircularRefSymbol)?.value ?? null
+    return (
+        (obj &&
+            obj instanceof Object &&
+            Object.getOwnPropertyDescriptor(obj, DeepMapCircularRefSymbol)?.value) ||
+        null
+    )
 }
 
 objectDeepMap.sourceRef = (
@@ -121,21 +126,12 @@ objectDeepMap.sourceRef = (
     source: object
     index: number
 } => {
-    return Object.getOwnPropertyDescriptor(obj, DeepMapSourceRefSymbol)?.value ?? null
-}
-
-export function metaTypesSchemaToValue(obj: object) {
-    return objectDeepMap(obj, (obj) => {
-        if (MetaType.isMetaType(obj)) {
-            obj = (obj as any).metaTypeImpl.default
-        }
-
-        if (obj instanceof MetaTypeImpl) {
-            obj = obj.default
-        }
-
-        return obj
-    })
+    return (
+        (obj &&
+            obj instanceof Object &&
+            Object.getOwnPropertyDescriptor(obj, DeepMapSourceRefSymbol)?.value) ||
+        null
+    )
 }
 
 export function inspectMetaValue(value: any) {

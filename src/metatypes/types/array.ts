@@ -1,6 +1,5 @@
 import { MetaType, MetaTypeFlag, PrepareBaseType } from '../metatype'
 import { MetaTypeImpl, MetaTypeArgs } from '../metatypeImpl'
-import { metaTypesSchemaToValue } from '../../utils/deepObjects'
 import { NotEmptyArray } from '../../validators/notEmptyArray.validator'
 
 import { AnyImpl } from './any'
@@ -14,10 +13,7 @@ type ArrayMetaTypeArgs = {
 export class ArrayImpl extends MetaTypeImpl {
     name = 'ARRAY'
 
-    configure(args?: MetaTypeArgs & ArrayMetaTypeArgs) {
-        const notEmpty = args?.notEmpty
-        let subType: any = this.subType || this.default
-
+    prepareSubType(subType: any, args: MetaTypeArgs) {
         if (Array.isArray(subType)) {
             if (subType.length === 1) {
                 subType = MetaTypeImpl.getMetaTypeImpl(subType[0], args?.subTypesDefaultArgs)
@@ -45,9 +41,11 @@ export class ArrayImpl extends MetaTypeImpl {
             subType = MetaTypeImpl.getMetaTypeImpl(subType, args?.subTypesDefaultArgs)
         }
 
-        this.subType = subType || AnyImpl.build(args?.subTypesDefaultArgs)
+        return subType || AnyImpl.build(args?.subTypesDefaultArgs)
+    }
 
-        this.default = metaTypesSchemaToValue(this.default)
+    configure(args?: MetaTypeArgs & ArrayMetaTypeArgs) {
+        const notEmpty = args?.notEmpty
 
         const validators = notEmpty
             ? [...(this.validators || []), NotEmptyArray]

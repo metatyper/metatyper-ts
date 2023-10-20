@@ -1,5 +1,5 @@
 import { JSONSchema7 } from 'json-schema'
-import { StaticClass } from '../utils/classes'
+import { StaticClass } from '../utils'
 import { MetaTypeSerializationError, MetaTypeValidationError } from '../errors'
 import { MetaTypeValidator, NullableValidator } from '../validators'
 import { AutoCastSerializer } from '../serializers'
@@ -106,6 +106,12 @@ export class MetaTypeImpl {
             args = args(instance)
         }
 
+        args = { ...args }
+
+        if ('subType' in args) {
+            args['subType'] = instance.prepareSubType(args['subType'], args)
+        }
+
         instance.init(args)
         instance.configure(args)
 
@@ -113,6 +119,9 @@ export class MetaTypeImpl {
     }
 
     rebuild(args?: MetaTypeArgs | ((metaTypeImpl: MetaTypeImpl) => MetaTypeArgs)) {
+        const Cls = this.constructor as any
+        const instance = new Cls()
+
         if (args instanceof Function) {
             args = args(this)
         }
@@ -122,7 +131,9 @@ export class MetaTypeImpl {
             ...this._args
         }
 
-        const instance = new (this.constructor as any)()
+        if ('subType' in args) {
+            args['subType'] = instance.prepareSubType(args['subType'], args)
+        }
 
         instance.init(args)
         instance.configure(args)
@@ -377,6 +388,10 @@ export class MetaTypeImpl {
         return (this as any).constructor.isCompatible(value)
     }
 
+    prepareSubType(subType: any, _args: MetaTypeArgs) {
+        return subType
+    }
+
     static isCompatible(_value: any) {
         return false
     }
@@ -443,13 +458,13 @@ export class MetaTypeImpl {
 
             args = (metaTypeImpl: MetaTypeImpl) => {
                 return {
-                    ...(argsFunc(metaTypeImpl) || {}),
-                    default: valueToFind
+                    subType: valueToFind,
+                    ...(argsFunc(metaTypeImpl) || {})
                 }
             }
         } else {
             args = {
-                default: valueToFind,
+                subType: valueToFind,
                 ...args
             }
         }

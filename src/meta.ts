@@ -6,8 +6,7 @@ import {
     MetaTypeImpl,
     SchemaType
 } from './metatypes'
-import { isClass } from './utils/classes'
-import { inspectMetaValue } from './utils/deepObjects'
+import { isClass, inspectMetaValue } from './utils'
 
 export const IsMetaObjectSymbol = Symbol('[[IsMetaObject]]')
 export const MetaObjectNameSymbol = Symbol('[[MetaObjectName]]')
@@ -113,8 +112,6 @@ function initMetaObject(targetObject: object, origObj: object) {
                 descriptor.value = declaration?.default ?? null
             } else {
                 declaration = MetaTypeImpl.getMetaTypeImpl(descriptor.value, defaultMetaTypeArgs)
-
-                if (declaration) descriptor.value = declaration.default
             }
 
             if (doSerialize && declaration) {

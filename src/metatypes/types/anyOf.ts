@@ -5,10 +5,14 @@ import { TypeBuildError } from '../../errors/typeBuild.error'
 export class AnyOfImpl extends MetaTypeImpl {
     name = 'ANY_OF'
 
-    private _typesImpl: MetaTypeImpl[] = []
+    subType: MetaTypeImpl[]
 
-    configure(args?: MetaTypeArgs) {
-        const typesImpl: MetaTypeImpl[] = this.subType.map((type: any) => {
+    prepareSubType(subType: any, args: MetaTypeArgs) {
+        if (!Array.isArray(subType)) {
+            throw new TypeBuildError(`subType must be an array`, AnyOfImpl)
+        }
+
+        return subType.map((type: any) => {
             const metaTypeImpl = MetaTypeImpl.getMetaTypeImpl(type, args?.subTypesDefaultArgs)
 
             if (!metaTypeImpl) {
@@ -17,20 +21,20 @@ export class AnyOfImpl extends MetaTypeImpl {
 
             return metaTypeImpl
         })
+    }
 
-        this._typesImpl = typesImpl
-
+    configure() {
         this.schema = {
-            anyOf: typesImpl.map((typeOfAny) => typeOfAny.schema).filter((schema) => !!schema)
+            anyOf: this.subType.map((typeOfAny) => typeOfAny.schema).filter((schema) => !!schema)
         }
     }
 
     toString() {
-        return `${this.name}<${this._typesImpl.join(' | ')}>`
+        return `${this.name}<${this.subType.join(' | ')}>`
     }
 
     getMetaTypeOf(value: any) {
-        return this._typesImpl.find((metaType) => metaType.isMetaTypeOf(value))
+        return this.subType.find((metaType) => metaType.isMetaTypeOf(value))
     }
 
     isMetaTypeOf(value: any) {

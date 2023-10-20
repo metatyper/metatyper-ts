@@ -1,5 +1,5 @@
 import { MetaTypeImpl } from '../metatypes'
-import { Class } from '../utils/classes'
+import { Class } from '../utils'
 import { MetaError } from './meta.error'
 
 export class TypeBuildError extends MetaError {

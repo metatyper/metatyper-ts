@@ -1,20 +1,17 @@
 import { MetaType, PrepareBaseType } from '../metatype'
 import { MetaTypeImpl, MetaTypeArgs } from '../metatypeImpl'
-import { metaTypesSchemaToValue } from '../../utils/deepObjects'
 import { TypeBuildError } from '../../errors/typeBuild.error'
 
 export class ExactArrayImpl extends MetaTypeImpl {
     name = 'EXACT_ARRAY'
-    private _typesImpl: MetaTypeImpl[] = null
+    subType: MetaTypeImpl[]
 
-    configure(args?: MetaTypeArgs) {
-        const subType = this.subType as any[]
-
+    prepareSubType(subType: any, args: MetaTypeArgs) {
         if (!Array.isArray(subType)) {
-            throw new TypeBuildError('subType is not array', ExactArrayImpl)
+            throw new TypeBuildError(`subType must be an array`, ExactArrayImpl)
         }
 
-        const typesImpl: MetaTypeImpl[] = subType.map((type) => {
+        return subType.map((type: any) => {
             const metaTypeImpl = MetaTypeImpl.getMetaTypeImpl(type, args?.subTypesDefaultArgs)
 
             if (!metaTypeImpl) {
@@ -26,43 +23,41 @@ export class ExactArrayImpl extends MetaTypeImpl {
 
             return metaTypeImpl
         })
+    }
 
-        this._typesImpl = typesImpl
-
-        this.default = metaTypesSchemaToValue(this.default)
-
+    configure() {
         this.schema = {
             type: 'array',
-            items: typesImpl.map((metaType) => metaType.schema),
-            minItems: subType.length,
-            maxItems: subType.length
+            items: this.subType.map((metaType) => metaType.schema),
+            minItems: this.subType.length,
+            maxItems: this.subType.length
         }
     }
 
     isMetaTypeOf(value: any) {
         return (
             Array.isArray(value) &&
-            value.length === this._typesImpl.length &&
-            this._typesImpl.every((metaTypeImpl, i) => metaTypeImpl.isMetaTypeOf(value[i]))
+            value.length === this.subType.length &&
+            this.subType.every((metaTypeImpl, i) => metaTypeImpl.isMetaTypeOf(value[i]))
         )
     }
 
     castToType({ value, ...args }) {
         return (value as any[]).map((item, i) =>
-            this._typesImpl[i].castToType({
+            this.subType[i].castToType({
                 ...args,
                 value: item,
-                metaTypeImpl: this._typesImpl[i]
+                metaTypeImpl: this.subType[i]
             })
         )
     }
 
     castToRawValue({ value, ...args }) {
         return (value as any[])?.map((item, i) =>
-            this._typesImpl[i].castToRawValue({
+            this.subType[i].castToRawValue({
                 ...args,
                 value: item,
-                metaTypeImpl: this._typesImpl[i]
+                metaTypeImpl: this.subType[i]
             })
         )
     }
