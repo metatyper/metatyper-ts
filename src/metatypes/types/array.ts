@@ -47,11 +47,11 @@ export class ArrayImpl extends MetaTypeImpl {
     configure(args?: MetaTypeArgs & ArrayMetaTypeArgs) {
         const notEmpty = args?.notEmpty
 
-        const validators = notEmpty
-            ? [...(this.validators || []), NotEmptyArray]
-            : [...(this.validators || [])]
+        const defaultValidators = notEmpty
+            ? [...(this.defaultValidators || []), NotEmptyArray]
+            : [...(this.defaultValidators || [])]
 
-        this.validators = validators
+        this.defaultValidators = defaultValidators
 
         this.schema = {
             type: 'array',
