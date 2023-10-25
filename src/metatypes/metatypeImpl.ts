@@ -92,7 +92,7 @@ export class MetaTypeImpl {
 
     subType: any = null
 
-    private _args: MetaTypeArgs = null
+    protected args: MetaTypeArgs = null
 
     private static _metaTypesRegistry: Record<string, StaticClass<typeof MetaTypeImpl>> = {}
 
@@ -128,7 +128,7 @@ export class MetaTypeImpl {
 
         args = {
             ...args,
-            ...this._args
+            ...this.args
         }
 
         if ('subType' in args) {
@@ -164,7 +164,7 @@ export class MetaTypeImpl {
         this.default = args?.default !== undefined ? args?.default : this.default
         this.nullable = !!(args?.nullable ?? this.nullable ?? true)
 
-        this._args = {
+        this.args = {
             ...args,
             name: this.name,
             schema: this.schema,
