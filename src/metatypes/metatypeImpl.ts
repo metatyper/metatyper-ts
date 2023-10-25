@@ -185,7 +185,7 @@ export class MetaTypeImpl {
 
     protected configure(_args?: MetaTypeArgs) {}
 
-    getJsonSchema() {
+    getJsonSchema(): SchemaType {
         return this.schema || {}
     }
 
