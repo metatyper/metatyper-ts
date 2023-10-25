@@ -51,7 +51,7 @@ export function MetaType<T = any, ImplT extends MetaTypeImpl = MetaTypeImpl>(
         },
 
         get schema(): SchemaType {
-            return JSON.parse(JSON.stringify(metaTypeImpl.schema))
+            return JSON.parse(JSON.stringify(metaTypeImpl.getJsonSchema()))
         },
 
         [Symbol.for('nodejs.util.inspect.custom')]() {
@@ -92,4 +92,5 @@ export function MetaType<T = any, ImplT extends MetaTypeImpl = MetaTypeImpl>(
 
 MetaType.isMetaType = (obj: any) => obj && !!obj[IsMetaTypeSymbol]
 
-MetaType.getMetaImpl = (obj: any) => (obj && !!obj[IsMetaTypeSymbol] && obj?.metaTypeImpl) ?? null
+MetaType.getMetaImpl = (obj: any): MetaTypeImpl =>
+    (obj && !!obj[IsMetaTypeSymbol] && obj?.metaTypeImpl) ?? null

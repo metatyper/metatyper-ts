@@ -75,7 +75,7 @@ export type MetaTypeArgs<T = any> = {
 
 export class MetaTypeImpl {
     name: string = null
-    schema: SchemaType = {}
+    schema: SchemaType = null
     default: any = null
     nullable: boolean = true
     validators: ValidatorType[] = []
@@ -184,6 +184,10 @@ export class MetaTypeImpl {
     }
 
     protected configure(_args?: MetaTypeArgs) {}
+
+    getJsonSchema() {
+        return this.schema || {}
+    }
 
     toString() {
         return `${this.name}`
