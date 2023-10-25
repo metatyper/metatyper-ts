@@ -1,14 +1,19 @@
 import { MetaType } from '../metatype'
 import { MetaTypeImpl, MetaTypeArgs } from '../metatypeImpl'
+
 import { isEqual } from '../../utils'
 
 export class LiteralImpl extends MetaTypeImpl {
     name = 'LITERAL'
 
-    configure() {
-        this.schema = {
-            const: this.subType
+    getJsonSchema() {
+        if (this.schema) {
+            return this.schema
         }
+
+        return (this.schema = {
+            const: this.subType
+        })
     }
 
     toString() {
@@ -24,7 +29,7 @@ export class LiteralImpl extends MetaTypeImpl {
     }
 }
 
-export type LITERAL<T> = MetaType<T, LiteralImpl, T>
+export type LITERAL<T> = MetaType<T, LiteralImpl>
 
 /**
  * metatype literal value
@@ -50,7 +55,7 @@ export type LITERAL<T> = MetaType<T, LiteralImpl, T>
 export function LITERAL<T extends number | string | symbol | boolean | bigint>(
     subType: T,
     args?: MetaTypeArgs<LITERAL<T>>
-) {
+): LITERAL<T> {
     if (MetaType.isMetaType(subType)) {
         return subType
     }

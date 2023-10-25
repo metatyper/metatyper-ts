@@ -7,9 +7,9 @@ import {
     INTEGER,
     DATE,
     ANY,
-    ANY_OF,
+    UNION,
     ARRAY,
-    EXACT_ARRAY,
+    TUPLE,
     OBJECT,
     LITERAL
 } from '../../../src/metatypes'
@@ -74,9 +74,9 @@ TypeIsEqual({} as unknown, ANY(), true)
 TypeIsEqual({} as never, ANY(), false)
 TypeIsEqual(ANY() as ANY, ANY(), true)
 
-const anOf1 = ANY_OF([1, 'string'])
-const anOf2 = ANY_OF([NUMBER(), 'string'])
-const anOf3 = ANY_OF([3, STRING()])
+const anOf1 = UNION([1, 'string'])
+const anOf2 = UNION([NUMBER(), 'string'])
+const anOf3 = UNION([3, STRING()])
 
 TypeIsEqual<number | string, typeof anOf1>(true)
 TypeIsEqual<number | string, typeof anOf2>(true)
@@ -84,7 +84,7 @@ TypeIsEqual<number | string, typeof anOf3>(true)
 TypeIsEqual<string, typeof anOf1>(false)
 TypeExtends<string, typeof anOf1>(true)
 TypeExtends<typeof anOf1, string>(true)
-TypeIsEqual<ANY_OF<string | number>, typeof anOf1>(true)
+TypeIsEqual<UNION<string | number>, typeof anOf1>(true)
 
 const arT1 = ARRAY(['string', NUMBER(), true])
 const arT2 = ARRAY(['string'])
@@ -96,19 +96,19 @@ TypeIsEqual<string[], typeof arT2>(true)
 TypeIsEqual<string[], typeof arT3>(true)
 TypeIsEqual<number[], typeof arT4>(true)
 TypeIsEqual<string[], typeof arT4>(false)
-TypeIsEqual<ARRAY<number | string | boolean>, typeof arT1>(true)
+TypeIsEqual<ARRAY<(number | string | boolean)[]>, typeof arT1>(true)
 
-const arrEx1 = EXACT_ARRAY([1, STRING()])
-const arrEx2 = EXACT_ARRAY(['string', NUMBER()])
-const arrEx3 = EXACT_ARRAY([NUMBER(), STRING()])
+const arrEx1 = TUPLE([1, STRING()])
+const arrEx2 = TUPLE(['string', NUMBER()])
+const arrEx3 = TUPLE([NUMBER(), STRING()])
 
 TypeIsEqual<[number, string], typeof arrEx1>(true)
 TypeIsEqual<[string, number], typeof arrEx2>(true)
 TypeIsEqual<[number, string], typeof arrEx3>(true)
 TypeIsEqual<[string], typeof arrEx1>(false)
 TypeIsEqual<[number, string], typeof arrEx2>(false)
-TypeIsEqual<EXACT_ARRAY<[number, string]>, typeof arrEx1>(true)
-TypeIsEqual<EXACT_ARRAY<[number, string]>, typeof arrEx2>(false)
+TypeIsEqual<TUPLE<[number, string]>, typeof arrEx1>(true)
+TypeIsEqual<TUPLE<[number, string]>, typeof arrEx2>(false)
 
 TypeIsEqual({ a: 'string' }, OBJECT({ a: '1' }), true)
 TypeIsEqual({ a: 'string' }, OBJECT({ a: 'string' }), true)

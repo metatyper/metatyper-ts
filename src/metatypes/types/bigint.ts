@@ -7,10 +7,7 @@ export class BigIntImpl extends MetaTypeImpl {
     schema: SchemaType = { type: 'string', pattern: '^([-+]?[0-9]+)$' }
 
     castToType({ value }) {
-        if (
-            typeof value === 'boolean' ||
-            (typeof value === 'string' && /^([-+]?[0-9]+)$/.test(value))
-        ) {
+        if (typeof value === 'string' && /^([-+]?[0-9]+)$/.test(value)) {
             return BigInt(value)
         }
 

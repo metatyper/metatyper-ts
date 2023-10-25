@@ -4,7 +4,6 @@ import { MetaTypeImpl, MetaTypeArgs, SchemaType } from '../metatypeImpl'
 @MetaTypeImpl.registerMetaType
 export class NumberImpl extends MetaTypeImpl {
     name = 'NUMBER'
-
     schema: SchemaType = { type: 'number' }
 
     static isCompatible(value: any) {

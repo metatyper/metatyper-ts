@@ -1,8 +1,15 @@
-import { MetaType, PrepareBaseType } from '../metatype'
+import { MetaType } from '../metatype'
 import { MetaTypeImpl, MetaTypeArgs } from '../metatypeImpl'
-import { TypeBuildError } from '../../errors/typeBuild.error'
-import { objectDeepMap, isNotPlainObject, inspectMetaValue } from '../../utils'
+
+import { objectDeepMap, prepareDeepSubTypes } from '../../utils'
+import { TypeBuildError } from '../../errors'
+
 import { AnyImpl } from './any'
+import { MetaRefSymbol } from './ref'
+
+export type ObjectMetaTypeArgs = {
+    makeDeepCopy: boolean
+}
 
 @MetaTypeImpl.registerMetaType
 export class ObjectImpl extends MetaTypeImpl {
@@ -10,7 +17,7 @@ export class ObjectImpl extends MetaTypeImpl {
 
     prepareSubType(subType: any, args: MetaTypeArgs) {
         if (subType && MetaType.isMetaType(subType)) {
-            throw new TypeBuildError('subType should be Record<any, any> or ANY()', ObjectImpl)
+            throw new TypeBuildError('subType must be a plain object or ANY()', ObjectImpl)
         }
 
         if (subType && (!(subType instanceof Object) || Array.isArray(subType))) {
@@ -20,34 +27,23 @@ export class ObjectImpl extends MetaTypeImpl {
         if (!subType) {
             subType = AnyImpl.build(args?.subTypesDefaultArgs)
         } else {
-            subType = objectDeepMap(subType, (value) => {
-                if (isNotPlainObject(value) || Array.isArray(value)) {
-                    const impl = MetaTypeImpl.getMetaTypeImpl(value, args?.subTypesDefaultArgs)
+            subType = prepareDeepSubTypes(subType, args)
 
-                    if (!impl) {
-                        throw new TypeBuildError(
-                            `subType contains a value for which the meta type cannot be found: ${value}`,
-                            ObjectImpl
-                        )
-                    }
+            const ref = subType[MetaRefSymbol]
 
-                    return impl
-                }
-
-                const circularRef = objectDeepMap.circularRef(value)
-
-                if (circularRef) {
-                    return AnyImpl.build(args?.subTypesDefaultArgs) // TODO: add circular type
-                }
-
-                return value
-            })
+            if (ref && !ref['source']) {
+                ref['source'] = this
+            }
         }
 
         return subType
     }
 
-    configure() {
+    getJsonSchema() {
+        if (this.schema) {
+            return this.schema
+        }
+
         this.schema =
             this.subType instanceof MetaTypeImpl
                 ? {
@@ -56,13 +52,18 @@ export class ObjectImpl extends MetaTypeImpl {
                 : {
                       type: 'object',
                       properties: Object.fromEntries(
-                          Object.entries<any>(this.subType).map(([key, impl]) => [
-                              key,
-                              impl.schema
-                          ])
+                          Object.entries<any>(this.subType).map(([key, impl]) => {
+                              return [key, impl && impl.getJsonSchema ? impl.getJsonSchema() : {}]
+                          })
                       )
                       // TODO: add required: Object.keys(subType)
                   }
+
+        if (this.subType[MetaRefSymbol]) {
+            this.schema['id'] = this.subType[MetaRefSymbol].index
+        }
+
+        return this.schema
     }
 
     toString() {
@@ -70,41 +71,72 @@ export class ObjectImpl extends MetaTypeImpl {
             return `${this.name}<ANY>`
         }
 
-        return `${this.name}<${inspectMetaValue(this.subType)}>`
+        const ref = this.subType[MetaRefSymbol]?.index
+        const refString = ref ? `(id: ${ref})` : ''
+
+        const subTypeRepr = Object.entries(this.subType)
+            .map(([key, value]) => `${key}: ${value}`)
+            .join(', ')
+
+        return `${this.name}${refString}<{ ${subTypeRepr} }>`
     }
 
-    isMetaTypeOf(valueToCheck: any) {
-        if (this.subType instanceof MetaTypeImpl) {
-            return valueToCheck instanceof Object
+    isMetaTypeOf(value: any) {
+        if (!(value instanceof Object)) {
+            return false
         }
 
-        return (
-            valueToCheck instanceof Object &&
-            Object.entries(this.subType).every(
-                ([key, impl]: any) =>
-                    valueToCheck[key] !== undefined && impl.isMetaTypeOf(valueToCheck[key])
-            )
-        )
+        if (this.subType instanceof AnyImpl) {
+            return value instanceof Object
+        }
+
+        // TODO: process required fields
+
+        for (const key of Object.keys(value)) {
+            let metaType = this.subType[key]
+
+            if (!metaType) continue
+
+            if (objectDeepMap.circularRef(metaType)) {
+                metaType = metaType.source
+            }
+
+            if (objectDeepMap.circularRef(value[key])) {
+                continue
+            }
+
+            if (!metaType.isMetaTypeOf(value[key])) {
+                return false
+            }
+        }
+
+        return true
     }
 
     castToType({ value }) {
-        return objectDeepMap(value, (obj) => {
-            if (MetaType.isMetaType(obj)) {
-                obj = (obj as any).metaTypeImpl.default
+        return objectDeepMap(
+            value,
+            (obj) => {
+                if (MetaType.isMetaType(obj)) {
+                    obj = (obj as any).metaTypeImpl.default
+                }
+
+                if (obj instanceof MetaTypeImpl) {
+                    obj = obj.default
+                }
+
+                const circularRef = objectDeepMap.circularRef(obj)
+
+                if (circularRef) {
+                    return circularRef.source
+                }
+
+                return obj
+            },
+            {
+                deepCopy: this.args.makeDeepCopy
             }
-
-            if (obj instanceof MetaTypeImpl) {
-                obj = obj.default
-            }
-
-            const circularRef = objectDeepMap.circularRef(obj)
-
-            if (circularRef) {
-                return circularRef.source
-            }
-
-            return obj
-        })
+        )
     }
 
     static isCompatible(value: any) {
@@ -136,13 +168,12 @@ export type OBJECT<T extends object> = MetaType<T, ObjectImpl>
  *
  * ```
  */
-export function OBJECT<T extends object, R extends object = PrepareBaseType<T>>(
-    subType?: T,
-    args?: MetaTypeArgs<OBJECT<R>>
-) {
+export function OBJECT<T extends object>(subType?: T | (() => T), args?: MetaTypeArgs<OBJECT<T>>) {
     if (!subType) subType = {} as T
 
-    return MetaType<OBJECT<R>>(
+    if (subType instanceof Function) subType = subType()
+
+    return MetaType<OBJECT<T>>(
         ObjectImpl.build({
             ...args,
             subType

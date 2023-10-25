@@ -1,4 +1,4 @@
 export * from './classes'
-export * from './objects'
+export * from './checks'
 export * from './typeTest'
 export * from './deepObjects'

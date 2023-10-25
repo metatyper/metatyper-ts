@@ -16,19 +16,28 @@ export function isNotPlainObject(obj: any) {
     return false
 }
 
-export function objectDeepMap(obj: object, processFunc: (value: any, obj: object) => any) {
+export function objectDeepMap(
+    obj: object,
+    processFunc: (value: any, args: { rootObj: any; isRootValue: boolean }) => any,
+    args?: {
+        deepCopy?: boolean
+    }
+) {
+    const deepCopy = args?.deepCopy ?? true
+
     const objectsMap = new WeakMap()
 
     if (isNotPlainObject(obj)) {
-        return processFunc(obj, obj)
+        return processFunc(obj, {
+            rootObj: obj,
+            isRootValue: true
+        })
     }
 
     function deepCopyAndResolveCycles() {
         if (isNotPlainObject(obj)) {
             return obj
         }
-
-        let circularIndex = 1
 
         const newObj = Array.isArray(obj) ? [] : {}
 
@@ -39,6 +48,7 @@ export function objectDeepMap(obj: object, processFunc: (value: any, obj: object
 
         objectsMap.set(obj, newObj)
 
+        let circularIndex = 1
         const processingStack = [obj]
 
         while (processingStack.length > 0) {
@@ -48,17 +58,17 @@ export function objectDeepMap(obj: object, processFunc: (value: any, obj: object
             Object.entries<any>(origObj).forEach(([key, value]) => {
                 if (!isNotPlainObject(value)) {
                     if (!objectsMap.has(value)) {
-                        const newValue = Array.isArray(value) ? [] : {}
+                        const targetValue = deepCopy ? (Array.isArray(value) ? [] : {}) : value
 
-                        newValue[DeepMapSourceRefSymbol] = {
+                        targetValue[DeepMapSourceRefSymbol] = {
                             index: null,
-                            source: newValue
+                            source: targetValue
                         }
 
-                        objectsMap.set(value, newValue)
+                        objectsMap.set(value, targetValue)
                         processingStack.push(value)
 
-                        value = newValue
+                        value = targetValue
                     } else {
                         const ref = objectsMap.get(value)[DeepMapSourceRefSymbol]
 
@@ -67,7 +77,10 @@ export function objectDeepMap(obj: object, processFunc: (value: any, obj: object
                         }
 
                         value = {
-                            [DeepMapCircularRefSymbol]: ref
+                            [DeepMapCircularRefSymbol]: {
+                                index: ref.index,
+                                source: ref.source
+                            }
                         }
                     }
                 }
@@ -83,7 +96,10 @@ export function objectDeepMap(obj: object, processFunc: (value: any, obj: object
 
     function deepProcess(curObj: any) {
         if (isNotPlainObject(curObj)) {
-            return processFunc(curObj, objCopy)
+            return processFunc(curObj, {
+                rootObj: objCopy,
+                isRootValue: curObj === objCopy
+            })
         }
 
         if (!curObj[DeepMapSourceRefSymbol]?.index) {
@@ -100,7 +116,10 @@ export function objectDeepMap(obj: object, processFunc: (value: any, obj: object
             })
         }
 
-        return processFunc(curObj, objCopy)
+        return processFunc(curObj, {
+            rootObj: objCopy,
+            isRootValue: curObj === objCopy
+        })
     }
 
     return deepProcess(objCopy)
@@ -154,20 +173,20 @@ export function inspectMetaValue(value: any) {
             return `Date(${value.toISOString()})`
         }
 
-        if (value instanceof MetaTypeImpl) {
-            return `${value}`
-        }
-
-        if (value instanceof Function) {
-            return `[Function: ${value.name || '(anonymous)'}]`
-        }
-
         if (MetaType.isMetaType(value)) {
             return `${value}`
         }
 
         if (Meta.isMetaObject(value)) {
             return `${value}`
+        }
+
+        if (value instanceof MetaTypeImpl) {
+            return `${value}`
+        }
+
+        if (value instanceof Function) {
+            return `[Function: ${value.name || '(anonymous)'}]`
         }
 
         if (value instanceof Object) {
@@ -202,5 +221,37 @@ export function inspectMetaValue(value: any) {
     })
 }
 
+const MetaTypePreparedFlagSymbol = Symbol('MetaTypePreparedFlag')
+
+export function prepareDeepSubTypes(obj: any, args?: MetaTypeArgs) {
+    if (isNotPlainObject(obj)) {
+        return MetaTypeImpl.getMetaTypeImpl(obj, args?.subTypesDefaultArgs)
+    }
+
+    if (Object.getOwnPropertyDescriptor(obj, MetaTypePreparedFlagSymbol)?.value) {
+        return obj
+    }
+
+    return objectDeepMap(obj, (value, { isRootValue }) => {
+        if (isRootValue) {
+            return value
+        }
+
+        const circularRef = objectDeepMap.circularRef(value)
+
+        if (circularRef) {
+            value = {
+                [DeepMapCircularRefSymbol]: circularRef
+            }
+        }
+
+        if (!isNotPlainObject(value)) {
+            value[MetaTypePreparedFlagSymbol] = true
+        }
+
+        return MetaTypeImpl.getMetaTypeImpl(value, args?.subTypesDefaultArgs)
+    })
+}
+
 import { Meta } from '../meta'
-import { MetaType, MetaTypeImpl } from '../metatypes'
+import { MetaType, MetaTypeArgs, MetaTypeImpl } from '../metatypes'

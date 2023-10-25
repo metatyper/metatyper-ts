@@ -1,9 +1,13 @@
-import { MetaType, MetaTypeFlag, PrepareBaseType } from '../metatype'
+import { MetaType } from '../metatype'
 import { MetaTypeImpl, MetaTypeArgs } from '../metatypeImpl'
-import { NotEmptyArray } from '../../validators/notEmptyArray.validator'
+
+import { NotEmptyArray } from '../../validators'
+import { objectDeepMap, prepareDeepSubTypes } from '../../utils'
+import { TypeBuildError } from '../../errors'
 
 import { AnyImpl } from './any'
-import { AnyOfImpl } from './anyOf'
+import { UnionImpl } from './union'
+import { MetaRefSymbol } from './ref'
 
 type ArrayMetaTypeArgs = {
     notEmpty?: boolean
@@ -14,61 +18,90 @@ export class ArrayImpl extends MetaTypeImpl {
     name = 'ARRAY'
 
     prepareSubType(subType: any, args: MetaTypeArgs) {
-        if (Array.isArray(subType)) {
-            if (subType.length === 1) {
-                subType = MetaTypeImpl.getMetaTypeImpl(subType[0], args?.subTypesDefaultArgs)
-            } else if (subType.length > 1) {
-                if (args?.subTypesDefaultArgs instanceof Function) {
-                    subType = AnyOfImpl.build((metaTypeImpl) => {
-                        const argsFunc = args?.subTypesDefaultArgs as (impl: MetaTypeImpl) => any
-                        const subArgs = argsFunc(metaTypeImpl) || {}
-
-                        return {
-                            ...subArgs,
-                            subType
-                        }
-                    })
-                } else {
-                    subType = AnyOfImpl.build({
-                        ...(args?.subTypesDefaultArgs || {}),
-                        subType
-                    })
-                }
-            } else {
-                subType = AnyImpl.build(args?.subTypesDefaultArgs)
-            }
-        } else {
-            subType = MetaTypeImpl.getMetaTypeImpl(subType, args?.subTypesDefaultArgs)
+        if (!Array.isArray(subType)) {
+            throw new TypeBuildError('subType must be an array', ArrayImpl)
         }
 
-        return subType || AnyImpl.build(args?.subTypesDefaultArgs)
+        subType = prepareDeepSubTypes(subType, args)
+
+        const ref = subType[MetaRefSymbol]
+
+        if (subType.length === 0) {
+            subType = AnyImpl.build(args?.subTypesDefaultArgs)
+        } else if (subType.length === 1) {
+            subType = MetaTypeImpl.getMetaTypeImpl(subType[0], args?.subTypesDefaultArgs)
+        } else if (subType.length > 1) {
+            subType = UnionImpl.build({
+                ...(args?.subTypesDefaultArgs || {}),
+                subType
+            })
+        }
+
+        if (ref) {
+            if (!ref['source']) {
+                ref['source'] = this
+            }
+
+            subType[MetaRefSymbol] = ref
+        }
+
+        return subType
     }
 
     configure(args?: MetaTypeArgs & ArrayMetaTypeArgs) {
-        const notEmpty = args?.notEmpty
-
-        const defaultValidators = notEmpty
-            ? [...(this.defaultValidators || []), NotEmptyArray]
-            : [...(this.defaultValidators || [])]
-
-        this.defaultValidators = defaultValidators
-
-        this.schema = {
-            type: 'array',
-            items: this.subType.schema,
-            minItems: notEmpty ? 1 : 0
+        if (args.notEmpty) {
+            this.defaultValidators = [...(this.defaultValidators || []), NotEmptyArray]
         }
     }
 
+    getJsonSchema() {
+        if (this.schema) {
+            return this.schema
+        }
+
+        this.schema = {
+            type: 'array',
+            items: this.subType.getJsonSchema(),
+            minItems: this.args.notEmpty ? 1 : 0
+        }
+
+        if (this.subType[MetaRefSymbol]) {
+            this.schema['id'] = this.subType[MetaRefSymbol].index
+        }
+
+        return this.schema
+    }
+
     toString() {
-        return `${this.name}<${this.subType}>`
+        const ref = this.subType[MetaRefSymbol]?.index
+        const refString = ref ? `(id: ${ref})` : ''
+
+        return `${this.name}${refString}<${this.subType}[]>`
     }
 
     isMetaTypeOf(value: any) {
-        return (
-            Array.isArray(value) &&
-            value.every((valueItem) => this.subType.isMetaTypeOf(valueItem))
-        )
+        if (!Array.isArray(value)) {
+            return false
+        }
+
+        if (this.subType instanceof AnyImpl) {
+            return true
+        }
+
+        for (const item of value) {
+            if (!item) continue
+
+            // TODO: resolve it
+            if (objectDeepMap.circularRef(item)) {
+                continue
+            }
+
+            if (!this.subType.isMetaTypeOf(item)) {
+                return false
+            }
+        }
+
+        return true
     }
 
     castToType({ value, ...args }) {
@@ -92,7 +125,7 @@ export class ArrayImpl extends MetaTypeImpl {
     }
 }
 
-export type ARRAY<T> = MetaType<T[], ArrayImpl>
+export type ARRAY<T> = MetaType<T, ArrayImpl>
 
 /**
  * metatype that works like an array
@@ -118,19 +151,25 @@ export type ARRAY<T> = MetaType<T[], ArrayImpl>
  * // TODO: obj3.push('str') -> validation error or not
  * ```
  */
-export function ARRAY<T extends MetaTypeFlag = any, R = PrepareBaseType<T>>(
-    subType?: T,
-    args?: MetaTypeArgs<ARRAY<R>> & ArrayMetaTypeArgs
-): ARRAY<R>
-export function ARRAY<T = any, R = PrepareBaseType<T>>(
+export function ARRAY<T = any>(
     subType?: T[],
-    args?: MetaTypeArgs<ARRAY<R>> & ArrayMetaTypeArgs
-): ARRAY<R>
-export function ARRAY<T = any, R = PrepareBaseType<T>>(
+    args?: MetaTypeArgs<ARRAY<T>> & ArrayMetaTypeArgs
+): ARRAY<T[]>
+export function ARRAY<T = any>(
+    subType?: () => T[],
+    args?: MetaTypeArgs<ARRAY<T>> & ArrayMetaTypeArgs
+): ARRAY<T[]>
+export function ARRAY<T = any>(
     subType?: T,
-    args?: MetaTypeArgs<ARRAY<R>> & ArrayMetaTypeArgs
-): ARRAY<R>
-export function ARRAY(subType?: any, args?: MetaTypeArgs & ArrayMetaTypeArgs) {
+    args?: MetaTypeArgs<ARRAY<T>> & ArrayMetaTypeArgs
+): ARRAY<T[]>
+export function ARRAY(subType?: any, args?: any) {
+    if (subType instanceof Function) subType = subType()
+
+    if (!Array.isArray(subType)) {
+        subType = [subType]
+    }
+
     return MetaType(
         ArrayImpl.build({
             ...args,

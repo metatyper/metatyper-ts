@@ -2,18 +2,6 @@ import { MetaTypeImpl, SchemaType } from './metatypeImpl'
 
 export const IsMetaTypeSymbol = Symbol('IsMetaType')
 
-export type PrepareBaseType<T> = T extends MetaTypeFlag
-    ? T
-    : T extends Date
-    ? T
-    : T extends []
-    ? []
-    : T extends (infer U)[]
-    ? (U extends MetaTypeFlag ? U : PrepareBaseType<U>)[]
-    : T extends { [key in string]: any }
-    ? { [key in keyof T]: T[key] extends MetaTypeFlag ? T[key] : PrepareBaseType<T[key]> }
-    : T
-
 export type MetaTypeFlag = {
     [IsMetaTypeSymbol]?: true
 }
@@ -28,9 +16,7 @@ export type MetaTypeProps<ImplT = MetaTypeImpl> = {
     parse?: (value: any) => any
 }
 
-export type MetaType<T, ImplT = MetaTypeImpl, R = PrepareBaseType<T>> = R &
-    MetaTypeFlag &
-    MetaTypeProps<ImplT>
+export type MetaType<T, ImplT = MetaTypeImpl> = T & MetaTypeFlag & MetaTypeProps<ImplT>
 
 export function MetaType<T = any, ImplT extends MetaTypeImpl = MetaTypeImpl>(
     metaTypeImpl: ImplT

@@ -23,7 +23,7 @@ More Facts:
 - Works with native JavaScript.
 - Zero dependencies in JavaScript source code.
 - Rich error details. You can get all the information about your error.
-- It's tiny. 8kb minified + zipped.
+- It's tiny. Less than 10kb (minified + zipped).
 
 <br/>
 
@@ -47,9 +47,9 @@ More Facts:
     - [MetaTypeArgs](#metatypeargs)
   - [Built-in meta types](#built-in-meta-types)
     - [ANY](#any)
-    - [ANY\_OF](#any_of)
+    - [UNION](#union)
     - [ARRAY](#array)
-    - [EXACT\_ARRAY](#exact_array)
+    - [TUPLE](#tuple)
     - [OBJECT](#object)
     - [LITERAL](#literal)
     - [BOOLEAN](#boolean)
@@ -725,13 +725,13 @@ let someVar: ANY  // this is equal to `any`
 
 <br/>
 
-#### ANY_OF
+#### UNION
 
 ```ts
-import { ANY_OF, BOOLEAN } from 'metatyper' 
+import { UNION, BOOLEAN } from 'metatyper' 
 
 const obj = Meta({ 
-    someField: ANY_OF([1, 'string', BOOLEAN()], {/*MetaTypeArgs*/})
+    someField: UNION([1, 'string', BOOLEAN()], {/*MetaTypeArgs*/})
 })
 /*
 obj type is equal to 
@@ -740,7 +740,7 @@ obj type is equal to
 }
 */
 
-let someVar: ANY_OF<1 | string | BOOLEAN>  // this is equal to `1 | string | boolean`
+let someVar: UNION<1 | string | BOOLEAN>  // this is equal to `1 | string | boolean`
 
 ```
 
@@ -775,14 +775,14 @@ let someVar: ARRAY<1 | string | BOOLEAN>  // this is equal to `(1 | string | boo
 
 <br/>
 
-#### EXACT_ARRAY
+#### TUPLE
 
 ```ts
-import { EXACT_ARRAY, BOOLEAN } from 'metatyper' 
+import { TUPLE, BOOLEAN } from 'metatyper' 
 
 
 const obj = Meta({ 
-    someField: EXACT_ARRAY([1, 'string', BOOLEAN()], {/*MetaTypeArgs*/})
+    someField: TUPLE([1, 'string', BOOLEAN()], {/*MetaTypeArgs*/})
 })
 /*
 obj type is equal to 
@@ -791,7 +791,7 @@ obj type is equal to
 }
 */
 
-let someVar: EXACT_ARRAY<[1, string, BOOLEAN]>  // this is equal to `[1, string, boolean]`
+let someVar: TUPLE<[1, string, BOOLEAN]>  // this is equal to `[1, string, boolean]`
 ```
 
 <br/>
@@ -1328,7 +1328,7 @@ MetaTypeSerializationError is inherited from MetaError and besides the default p
 2. `readonly metaTypeImpl: MetaTypeImpl` - implementation instance of the Meta type that caused this error
 3. `readonly serializer: SerializerType` - serializer that returned the error
 4. `readonly propName?: string` - name of the property for which serialization failed (only if an object was serialized)
-5. `readonly value: any` - value for which serialization failed (it should be taken into account that this value is after previous serializers)
+5. `readonly value: any` - value for which serialization failed (it must be taken into account that this value is after previous serializers)
 6. `readonly place: SerializePlaceType | DeSerializePlaceType` - the place where serialization/deserialization was invoked
 7. `readonly subError: Error` - error that was caused during serialization
 
@@ -1344,7 +1344,7 @@ MetaTypeValidationError is inherited from MetaError and besides the default prop
 1. `readonly metaTypeImpl: MetaTypeImpl` - implementation instance of the Meta type that caused this error
 1. `readonly validator: ValidatorType` - validator that returned false or throw an error
 1. `readonly propName?: string` - name of the property for which validation failed (only if an object was validated)
-1. `readonly value: any` - value for which validation failed (it should be taken into account that this value is after all serializers)
+1. `readonly value: any` - value for which validation failed (it must be taken into account that this value is after all serializers)
 1. `readonly subError?: Error` - error that was caused during validation
 
 <br/>
@@ -1373,6 +1373,7 @@ These libs are worth a look:
 - type-fest
 - ts-toolbelt
 - zod
+- class-validator
 - runtypes
 - joi
 - yup

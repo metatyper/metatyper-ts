@@ -15,12 +15,12 @@ import {
     DateImpl,
     ANY,
     AnyImpl,
-    ANY_OF,
-    AnyOfImpl,
+    UNION,
+    UnionImpl,
     ARRAY,
     ArrayImpl,
-    EXACT_ARRAY,
-    ExactArrayImpl,
+    TUPLE,
+    TupleImpl,
     OBJECT,
     ObjectImpl,
     LITERAL,
@@ -161,8 +161,8 @@ describe('MetaType and MetaTypeImpl', () => {
         expect(metaTypeImpl['schema']).toEqual({})
     })
 
-    test('ANY_OF', () => {
-        const metaType = ANY_OF([1n, NUMBER(), 'string', true])
+    test('UNION', () => {
+        const metaType = UNION([1n, NUMBER(), 'string', true])
         const metaTypeImpl = MetaType.getMetaImpl(metaType)
 
         expect(MetaType.isMetaType(metaType)).toBe(true)
@@ -171,7 +171,7 @@ describe('MetaType and MetaTypeImpl', () => {
         expect(metaTypeImpl.isMetaTypeOf('1')).toBe(true)
         expect(metaTypeImpl.isMetaTypeOf(false)).toBe(true)
         expect(metaTypeImpl.isMetaTypeOf(new Date())).toBe(false)
-        expect(metaTypeImpl['constructor']).toBe(AnyOfImpl)
+        expect(metaTypeImpl['constructor']).toBe(UnionImpl)
         expect(metaTypeImpl['schema']).toEqual({
             anyOf: [
                 {
@@ -246,13 +246,13 @@ describe('MetaType and MetaTypeImpl', () => {
         })
     })
 
-    test('EXACT_ARRAY', () => {
-        const metaType = EXACT_ARRAY([1n, NUMBER(), 'string', true])
+    test('TUPLE', () => {
+        const metaType = TUPLE([1n, NUMBER(), 'string', true])
         const metaTypeImpl = MetaType.getMetaImpl(metaType)
 
         expect(MetaType.isMetaType(metaType)).toBe(true)
-        expect(ExactArrayImpl.isCompatible([1])).toBe(true)
-        expect(ExactArrayImpl.isCompatible(1)).toBe(false)
+        expect(TupleImpl.isCompatible([1])).toBe(true)
+        expect(TupleImpl.isCompatible(1)).toBe(false)
         expect(metaTypeImpl.isMetaTypeOf([1])).toBe(false)
         expect(metaTypeImpl.isMetaTypeOf([1n])).toBe(false)
         expect(metaTypeImpl.isMetaTypeOf(['1', 1])).toBe(false)
@@ -260,7 +260,7 @@ describe('MetaType and MetaTypeImpl', () => {
         expect(metaTypeImpl.isMetaTypeOf([1, new Date()])).toBe(false)
         expect(metaTypeImpl.isMetaTypeOf(1)).toBe(false)
         expect(metaTypeImpl.isMetaTypeOf([2n, 2, '3', false])).toBe(true)
-        expect(metaTypeImpl['constructor']).toBe(ExactArrayImpl)
+        expect(metaTypeImpl['constructor']).toBe(TupleImpl)
         expect(metaTypeImpl['schema']).toEqual({
             type: 'array',
             items: [
@@ -311,6 +311,24 @@ describe('MetaType and MetaTypeImpl', () => {
                 }
             }
         })
+    })
+
+    test('complex OBJECT', () => {
+        const obj = {
+            a: 'string',
+            b: NUMBER(),
+            c: {
+                d: null,
+                e: []
+            }
+        }
+
+        obj['c']['d'] = obj
+        obj['c']['e'] = [obj]
+
+        const metaType = OBJECT(obj)
+
+        console.log(metaType)
     })
 
     test('LITERAL', () => {

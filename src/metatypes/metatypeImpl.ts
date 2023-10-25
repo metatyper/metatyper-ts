@@ -1,6 +1,8 @@
 import { JSONSchema7 } from 'json-schema'
+
 import { StaticClass } from '../utils'
 import { MetaTypeSerializationError, MetaTypeValidationError } from '../errors'
+
 import { MetaTypeValidator, NullableValidator } from '../validators'
 import { AutoCastSerializer } from '../serializers'
 
