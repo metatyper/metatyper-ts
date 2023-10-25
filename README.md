@@ -826,6 +826,18 @@ obj type is equal to
 }
 */
 
+
+const anotherObj = Meta({ 
+    someField: OBJECT(BOOLEAN(), {/*MetaTypeArgs*/})
+})
+/*
+obj type is equal to 
+{
+    someField: Record<string, boolean>
+}
+*/
+
+
 // this is equal to `{ a: 1; b: string; c: boolean }`
 let someVar: OBJECT<{ a: 1; b: string; c: BOOLEAN }>  
 
