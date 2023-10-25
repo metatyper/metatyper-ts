@@ -73,10 +73,10 @@ describe('MetaType and MetaTypeImpl', () => {
         expect(customMetaType3Impl.name).toBe('CUSTOM3')
         expect(customMetaType4Impl.name).toBe('CUSTOM4')
 
-        expect(customMetaType1Impl.schema).toEqual({})
-        expect(customMetaType2Impl.schema).toEqual({})
-        expect(customMetaType3Impl.schema).toEqual({ type: 'number' })
-        expect(customMetaType4Impl.schema).toEqual({ type: 'string' })
+        expect(customMetaType1Impl.getJsonSchema()).toEqual({})
+        expect(customMetaType2Impl.getJsonSchema()).toEqual({})
+        expect(customMetaType3Impl.getJsonSchema()).toEqual({ type: 'number' })
+        expect(customMetaType4Impl.getJsonSchema()).toEqual({ type: 'string' })
 
         expect(customMetaType1Impl['defaultSerializers'].length).toBe(0)
         expect(customMetaType2Impl['defaultSerializers'].length).toBe(0)

@@ -80,7 +80,7 @@ export class ObjectImpl extends MetaTypeImpl {
     }
 
     isMetaTypeOf(value: any) {
-        if (!(value instanceof Object)) {
+        if (!(value instanceof Object) || Array.isArray(value)) {
             return false
         }
 

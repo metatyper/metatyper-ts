@@ -158,7 +158,7 @@ describe('MetaType and MetaTypeImpl', () => {
         expect(AnyImpl.isCompatible(true)).toBe(true)
         expect(AnyImpl.isCompatible(null)).toBe(true)
         expect(metaTypeImpl['constructor']).toBe(AnyImpl)
-        expect(metaTypeImpl['schema']).toEqual({})
+        expect(metaTypeImpl.getJsonSchema()).toEqual({})
     })
 
     test('UNION', () => {
@@ -172,7 +172,7 @@ describe('MetaType and MetaTypeImpl', () => {
         expect(metaTypeImpl.isMetaTypeOf(false)).toBe(true)
         expect(metaTypeImpl.isMetaTypeOf(new Date())).toBe(false)
         expect(metaTypeImpl['constructor']).toBe(UnionImpl)
-        expect(metaTypeImpl['schema']).toEqual({
+        expect(metaTypeImpl.getJsonSchema()).toEqual({
             anyOf: [
                 {
                     type: 'string',
@@ -216,7 +216,7 @@ describe('MetaType and MetaTypeImpl', () => {
         expect(metaTypeImpl.isMetaTypeOf([1, new Date()])).toBe(false)
         expect(metaTypeImpl.isMetaTypeOf(1)).toBe(false)
         expect(metaTypeImpl['constructor']).toBe(ArrayImpl)
-        expect(metaTypeImpl['schema']).toEqual({
+        expect(metaTypeImpl.getJsonSchema()).toEqual({
             type: 'array',
             items: {
                 anyOf: [
@@ -237,7 +237,7 @@ describe('MetaType and MetaTypeImpl', () => {
             },
             minItems: 1
         })
-        expect(MetaType.getMetaImpl(ARRAY(1))['schema']).toEqual({
+        expect(MetaType.getMetaImpl(ARRAY(1)).getJsonSchema()).toEqual({
             type: 'array',
             items: {
                 type: 'number'
@@ -261,7 +261,7 @@ describe('MetaType and MetaTypeImpl', () => {
         expect(metaTypeImpl.isMetaTypeOf(1)).toBe(false)
         expect(metaTypeImpl.isMetaTypeOf([2n, 2, '3', false])).toBe(true)
         expect(metaTypeImpl['constructor']).toBe(TupleImpl)
-        expect(metaTypeImpl['schema']).toEqual({
+        expect(metaTypeImpl.getJsonSchema()).toEqual({
             type: 'array',
             items: [
                 {
@@ -296,11 +296,11 @@ describe('MetaType and MetaTypeImpl', () => {
         expect(ObjectImpl.isCompatible(1)).toBe(false)
         expect(metaTypeImpl.isMetaTypeOf([1])).toBe(false)
         expect(metaTypeImpl.isMetaTypeOf(1)).toBe(false)
-        expect(metaTypeImpl.isMetaTypeOf({})).toBe(false)
+        expect(metaTypeImpl.isMetaTypeOf({})).toBe(true)
         expect(metaTypeImpl.isMetaTypeOf({ a: '1', b: '2' })).toBe(false)
         expect(metaTypeImpl.isMetaTypeOf({ a: '1', b: 2 })).toBe(true)
         expect(metaTypeImpl['constructor']).toBe(ObjectImpl)
-        expect(metaTypeImpl['schema']).toEqual({
+        expect(metaTypeImpl.getJsonSchema()).toEqual({
             type: 'object',
             properties: {
                 a: {
@@ -327,8 +327,45 @@ describe('MetaType and MetaTypeImpl', () => {
         obj['c']['e'] = [obj]
 
         const metaType = OBJECT(obj)
+        const metaTypeImpl = MetaType.getMetaImpl(metaType)
 
-        console.log(metaType)
+        const tstObj = {
+            a: 'str',
+            b: 2,
+            c: {
+                d: null,
+                e: null
+            }
+        }
+
+        tstObj['c']['d'] = {
+            a: 'someStr',
+            b: 3,
+            c: {
+                d: null,
+                e: [null]
+            }
+        }
+        tstObj['c']['e'] = [
+            {
+                a: 'someStr2',
+                b: 4,
+                c: {
+                    d: null,
+                    e: [null]
+                }
+            }
+        ]
+
+        expect(metaTypeImpl.isMetaTypeOf(tstObj)).toBe(true)
+
+        tstObj['c']['e'] = [null]
+
+        expect(metaTypeImpl.isMetaTypeOf(tstObj)).toBe(true)
+
+        tstObj['c']['e'] = [1]
+
+        expect(metaTypeImpl.isMetaTypeOf(tstObj)).toBe(false)
     })
 
     test('LITERAL', () => {
@@ -340,7 +377,7 @@ describe('MetaType and MetaTypeImpl', () => {
         expect(metaTypeImpl.isMetaTypeOf(1)).toBe(true)
         expect(metaTypeImpl.isMetaTypeOf(2)).toBe(false)
         expect(metaTypeImpl['constructor']).toBe(LiteralImpl)
-        expect(metaTypeImpl['schema']).toEqual({
+        expect(metaTypeImpl.getJsonSchema()).toEqual({
             const: 1
         })
     })
