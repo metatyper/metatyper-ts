@@ -44,7 +44,7 @@ export type LITERAL<T> = MetaType<T, LiteralImpl>
  *
  * let obj2: LITERAL<'1'> = null
  * obj2 = '1'
- * // obj2 = '2 -> type error
+ * // obj2 = '2' -> type error
  *
  * const obj3 = Meta({ a: LITERAL({ b: 1 }) }) // as { a: { b: 1 } }
  * obj3.a = { b: 1 }

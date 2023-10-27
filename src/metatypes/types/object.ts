@@ -1,4 +1,4 @@
-import { MetaType, MetaTypeFlag } from '../metatype'
+import { MetaType } from '../metatype'
 import { MetaTypeImpl, MetaTypeArgs } from '../metatypeImpl'
 
 import { objectDeepMap, prepareDeepSubTypes } from '../../utils'
@@ -8,7 +8,7 @@ import { AnyImpl } from './any'
 import { MetaRefSymbol } from './ref'
 
 export type ObjectMetaTypeArgs = {
-    makeDeepCopy: boolean
+    makeDeepCopy?: boolean
 }
 
 @MetaTypeImpl.registerMetaType
@@ -41,17 +41,27 @@ export class ObjectImpl extends MetaTypeImpl {
         }
 
         if (this.subType instanceof MetaTypeImpl) {
+            const subTypeSchema = this.subType.getJsonSchema()
+
+            if (!subTypeSchema) {
+                this.schema = null
+
+                return null
+            }
+
             this.schema = {
                 type: 'object',
-                additionalProperties: this.subType.getJsonSchema()
+                additionalProperties: subTypeSchema
             }
         } else {
             this.schema = {
                 type: 'object',
                 properties: Object.fromEntries(
-                    Object.entries<any>(this.subType).map(([key, impl]) => {
-                        return [key, impl && impl.getJsonSchema ? impl.getJsonSchema() : {}]
-                    })
+                    Object.entries<any>(this.subType)
+                        .map(([key, impl]) => {
+                            return [key, impl && impl.getJsonSchema ? impl.getJsonSchema() : {}]
+                        })
+                        .filter(([, value]) => value)
                 )
                 // TODO: add required: Object.keys(subType)
             }
@@ -144,7 +154,8 @@ export class ObjectImpl extends MetaTypeImpl {
                 return obj
             },
             {
-                deepCopy: this.args.makeDeepCopy
+                deepCopy: this.args.makeDeepCopy,
+                disableDeepProcess: this.args.disableDeepProcess
             }
         )
     }
@@ -184,17 +195,17 @@ export type OBJECT<T> = MetaType<T, ObjectImpl>
  */
 export function OBJECT<T extends any[]>(
     subType?: [...T] | (() => [...T]),
-    args?: MetaTypeArgs<OBJECT<T>>
+    args?: MetaTypeArgs<OBJECT<T>> & ObjectMetaTypeArgs
 ): OBJECT<T>
 export function OBJECT<T extends object>(
     subType?: T | (() => T),
-    args?: MetaTypeArgs<OBJECT<T>>
+    args?: MetaTypeArgs<OBJECT<T>> & ObjectMetaTypeArgs
 ): OBJECT<T>
 export function OBJECT<T, R = Record<string, T>>(
     subType?: T | (() => T),
-    args?: MetaTypeArgs<OBJECT<R>>
+    args?: MetaTypeArgs<OBJECT<R>> & ObjectMetaTypeArgs
 ): OBJECT<R>
-export function OBJECT(subType?: any, args?: MetaTypeArgs<any>) {
+export function OBJECT(subType?: any, args?: any) {
     if (!subType) subType = {}
 
     if (subType instanceof Function) subType = subType()

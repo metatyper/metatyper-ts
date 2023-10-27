@@ -96,14 +96,18 @@ function initMetaObject(targetObject: object, origObj: object) {
 
             let declaration: MetaTypeImpl = null
 
-            const defaultMetaTypeArgs = targetObject[MetaObjectTypesDefaultArgsSymbol] || {}
+            const defaultMetaTypeArgs = targetObject[MetaObjectTypesDefaultArgsSymbol]
 
             if (descriptor.value instanceof MetaTypeImpl) {
-                declaration = descriptor.value.rebuild(defaultMetaTypeArgs)
+                if (defaultMetaTypeArgs) {
+                    declaration = declaration.rebuild(defaultMetaTypeArgs)
+                }
 
                 descriptor.value = declaration?.default ?? null
             } else if (MetaType.isMetaType(descriptor.value)) {
                 declaration = MetaType.getMetaImpl(descriptor.value)
+
+                declaration = declaration.rebuild(defaultMetaTypeArgs || {})
 
                 if (defaultMetaTypeArgs) {
                     declaration = declaration.rebuild(defaultMetaTypeArgs)
@@ -797,7 +801,9 @@ Meta.getJsonSchema = (obj: object, override?: Record<string, any>) => {
     const objDeclarations = getMetaObjectDeclarations(obj)
 
     Object.entries<MetaTypeImpl>(objDeclarations).forEach(([propName, declaration]) => {
-        schemaProps[propName] = declaration.schema
+        const schema = declaration.getJsonSchema()
+
+        if (schema) schemaProps[propName] = schema
     })
 
     return {

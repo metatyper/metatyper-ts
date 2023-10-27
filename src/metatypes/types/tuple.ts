@@ -35,9 +35,19 @@ export class TupleImpl extends MetaTypeImpl {
             return this.schema
         }
 
+        const schemaList = this.subType
+            .map((metaType) => metaType.getJsonSchema())
+            .filter((schema) => schema)
+
+        if (schemaList.length === 0) {
+            this.schema = null
+
+            return null
+        }
+
         this.schema = {
             type: 'array',
-            items: this.subType.map((metaType) => metaType.getJsonSchema()),
+            items: schemaList,
             minItems: this.subType.length,
             maxItems: this.subType.length
         }

@@ -73,6 +73,7 @@ export type MetaTypeArgs<T = any> = {
     noBuiltinValidators?: boolean
     noBuiltinSerializers?: boolean
     subTypesDefaultArgs?: MetaTypeArgs | ((metaTypeImpl: MetaTypeImpl) => MetaTypeArgs)
+    disableDeepProcess?: (value: any) => boolean
 } & Record<string, any>
 
 export class MetaTypeImpl {
@@ -188,7 +189,7 @@ export class MetaTypeImpl {
     protected configure(_args?: MetaTypeArgs) {}
 
     getJsonSchema(): SchemaType {
-        return this.schema || {}
+        return this.schema
     }
 
     toString() {

@@ -1,15 +1,20 @@
 const DeepMapSourceRefSymbol = Symbol('DeepMapSourceRef')
 const DeepMapCircularRefSymbol = Symbol('DeepMapCircularRef')
 
-export function isNotPlainObject(obj: any) {
-    if (
-        !(obj instanceof Object) ||
-        MetaType.isMetaType(obj) ||
-        obj instanceof MetaTypeImpl ||
-        Meta.isMetaObject(obj) ||
-        obj instanceof Date ||
-        obj instanceof Function
-    ) {
+export function isNotPlainObject(obj: any, checkFunc?: (value: any) => boolean) {
+    if (!checkFunc) {
+        checkFunc = (value: any) => {
+            return (
+                Meta.isMetaObject(value) ||
+                MetaType.isMetaType(value) ||
+                value instanceof MetaTypeImpl ||
+                value instanceof Promise ||
+                value instanceof Function
+            )
+        }
+    }
+
+    if (!(obj instanceof Object) || obj instanceof Date || checkFunc(obj)) {
         return true
     }
 
@@ -21,13 +26,14 @@ export function objectDeepMap(
     processFunc: (value: any, args: { rootObj: any; isRootValue: boolean }) => any,
     args?: {
         deepCopy?: boolean
+        disableDeepProcess?: (value: any) => boolean
     }
 ) {
     const deepCopy = args?.deepCopy ?? true
 
     const objectsMap = new WeakMap()
 
-    if (isNotPlainObject(obj)) {
+    if (isNotPlainObject(obj, args?.disableDeepProcess)) {
         return processFunc(obj, {
             rootObj: obj,
             isRootValue: true
@@ -35,7 +41,7 @@ export function objectDeepMap(
     }
 
     function deepCopyAndResolveCycles() {
-        if (isNotPlainObject(obj)) {
+        if (isNotPlainObject(obj, args?.disableDeepProcess)) {
             return obj
         }
 
@@ -95,7 +101,7 @@ export function objectDeepMap(
     const objCopy = deepCopyAndResolveCycles()
 
     function deepProcess(curObj: any) {
-        if (isNotPlainObject(curObj)) {
+        if (isNotPlainObject(curObj, args?.disableDeepProcess)) {
             return processFunc(curObj, {
                 rootObj: objCopy,
                 isRootValue: curObj === objCopy
@@ -153,78 +159,95 @@ objectDeepMap.sourceRef = (
     )
 }
 
-export function inspectMetaValue(value: any) {
-    return objectDeepMap(value, (value) => {
-        const circularRef = objectDeepMap.circularRef(value)
+export function inspectMetaValue(
+    value: any,
+    args?: {
+        checkIgnoredObjects?: (value: any) => boolean
+    }
+) {
+    const checkIgnoredObjects = args?.checkIgnoredObjects
 
-        if (circularRef) {
-            return `[Circular *${circularRef.index}]`
-        }
+    if (isNotPlainObject(value, args?.checkIgnoredObjects)) {
+        return `${value}`
+    }
 
-        if (typeof value === 'string') {
-            return `'${value}'`
-        }
+    return objectDeepMap(
+        value,
+        (value) => {
+            const circularRef = objectDeepMap.circularRef(value)
 
-        if (typeof value === 'bigint') {
-            return `${value}n`
-        }
+            if (circularRef) {
+                return `[Circular *${circularRef.index}]`
+            }
 
-        if (value instanceof Date) {
-            return `Date(${value.toISOString()})`
-        }
+            if (typeof value === 'string') {
+                return `'${value}'`
+            }
 
-        if (MetaType.isMetaType(value)) {
-            return `${value}`
-        }
+            if (typeof value === 'bigint') {
+                return `${value}n`
+            }
 
-        if (Meta.isMetaObject(value)) {
-            return `${value}`
-        }
+            if (value instanceof Date) {
+                return `Date(${value.toISOString()})`
+            }
 
-        if (value instanceof MetaTypeImpl) {
-            return `${value}`
-        }
+            if (MetaType.isMetaType(value)) {
+                return `${value}`
+            }
 
-        if (value instanceof Function) {
-            return `[Function: ${value.name || '(anonymous)'}]`
-        }
+            if (Meta.isMetaObject(value)) {
+                return `${value}`
+            }
 
-        if (value instanceof Object) {
-            const sourceRef = objectDeepMap.sourceRef(value)
+            if (value instanceof MetaTypeImpl) {
+                return `${value}`
+            }
 
-            if (Array.isArray(value)) {
-                const arrayStrings = value.map((value) => {
-                    return `${value}`
-                })
+            if (value instanceof Function) {
+                return `[Function: ${value.name || '(anonymous)'}]`
+            }
 
-                if (sourceRef) {
-                    return `<ref *${sourceRef.index}> [ ${arrayStrings.join(', ')} ]`
-                } else {
-                    return `[ ${arrayStrings.join(', ')} ]`
-                }
-            } else {
-                const objOwnPropsStrings = Object.entries(value)
-                    .sort(([key1], [key2]) => key1.localeCompare(key2))
-                    .map(([name, value]) => {
-                        return `${name}: ${value}`
+            if (value instanceof Object) {
+                const sourceRef = objectDeepMap.sourceRef(value)
+
+                if (Array.isArray(value)) {
+                    const arrayStrings = value.map((value) => {
+                        return `${value}`
                     })
 
-                if (sourceRef) {
-                    return `<ref *${sourceRef.index}> { ${objOwnPropsStrings.join(', ')} }`
+                    if (sourceRef) {
+                        return `<ref *${sourceRef.index}> [ ${arrayStrings.join(', ')} ]`
+                    } else {
+                        return `[ ${arrayStrings.join(', ')} ]`
+                    }
                 } else {
-                    return `{ ${objOwnPropsStrings.join(', ')} }`
+                    const objOwnPropsStrings = Object.entries(value)
+                        .sort(([key1], [key2]) => key1.localeCompare(key2))
+                        .map(([name, value]) => {
+                            return `${name}: ${value}`
+                        })
+
+                    if (sourceRef) {
+                        return `<ref *${sourceRef.index}> { ${objOwnPropsStrings.join(', ')} }`
+                    } else {
+                        return `{ ${objOwnPropsStrings.join(', ')} }`
+                    }
                 }
             }
-        }
 
-        return `${value}`
-    })
+            return `${value}`
+        },
+        {
+            disableDeepProcess: checkIgnoredObjects
+        }
+    )
 }
 
 const MetaTypePreparedFlagSymbol = Symbol('MetaTypePreparedFlag')
 
 export function prepareDeepSubTypes(obj: any, args?: MetaTypeArgs) {
-    if (isNotPlainObject(obj)) {
+    if (isNotPlainObject(obj, args?.disableDeepProcess)) {
         return MetaTypeImpl.getMetaTypeImpl(obj, args?.subTypesDefaultArgs)
     }
 
@@ -232,25 +255,29 @@ export function prepareDeepSubTypes(obj: any, args?: MetaTypeArgs) {
         return obj
     }
 
-    return objectDeepMap(obj, (value, { isRootValue }) => {
-        if (isRootValue) {
-            return value
-        }
-
-        const circularRef = objectDeepMap.circularRef(value)
-
-        if (circularRef) {
-            value = {
-                [DeepMapCircularRefSymbol]: circularRef
+    return objectDeepMap(
+        obj,
+        (value, { isRootValue }) => {
+            if (isRootValue) {
+                return value
             }
-        }
 
-        if (!isNotPlainObject(value)) {
-            value[MetaTypePreparedFlagSymbol] = true
-        }
+            const circularRef = objectDeepMap.circularRef(value)
 
-        return MetaTypeImpl.getMetaTypeImpl(value, args?.subTypesDefaultArgs)
-    })
+            if (circularRef) {
+                value = {
+                    [DeepMapCircularRefSymbol]: circularRef
+                }
+            }
+
+            if (!isNotPlainObject(value, args?.disableDeepProcess)) {
+                value[MetaTypePreparedFlagSymbol] = true
+            }
+
+            return MetaTypeImpl.getMetaTypeImpl(value, args?.subTypesDefaultArgs)
+        },
+        { disableDeepProcess: args?.disableDeepProcess }
+    )
 }
 
 import { Meta } from '../meta'

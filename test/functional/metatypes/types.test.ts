@@ -160,7 +160,7 @@ describe('MetaType and MetaTypeImpl', () => {
         expect(AnyImpl.isCompatible(true)).toBe(true)
         expect(AnyImpl.isCompatible(null)).toBe(true)
         expect(metaTypeImpl['constructor']).toBe(AnyImpl)
-        expect(metaTypeImpl.getJsonSchema()).toEqual({})
+        expect(metaTypeImpl.getJsonSchema()).toEqual(null)
     })
 
     test('UNION', () => {

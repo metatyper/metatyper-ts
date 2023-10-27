@@ -59,9 +59,17 @@ export class ArrayImpl extends MetaTypeImpl {
             return this.schema
         }
 
+        const subTypeSchema = this.subType.getJsonSchema()
+
+        if (!subTypeSchema) {
+            this.schema = null
+
+            return null
+        }
+
         this.schema = {
             type: 'array',
-            items: this.subType.getJsonSchema(),
+            items: subTypeSchema,
             minItems: this.args.notEmpty ? 1 : 0
         }
 
@@ -121,7 +129,7 @@ export class ArrayImpl extends MetaTypeImpl {
     }
 
     static getCompatibilityScore(_value: any) {
-        return 1
+        return 3
     }
 }
 

@@ -23,6 +23,7 @@ export class DateImpl extends MetaTypeImpl {
     }
 
     static getCompatibilityScore(value: any): number {
+        // 0 for numbers
         return value instanceof Date ? 1 : 0
     }
 }

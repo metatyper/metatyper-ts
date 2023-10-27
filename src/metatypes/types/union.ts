@@ -30,10 +30,18 @@ export class UnionImpl extends MetaTypeImpl {
             return this.schema
         }
 
+        const schemaList = this.subType
+            .map((metaType) => metaType.getJsonSchema())
+            .filter((schema) => schema)
+
+        if (schemaList.length === 0) {
+            this.schema = null
+
+            return null
+        }
+
         this.schema = {
-            anyOf: this.subType
-                .map((typeOfAny) => typeOfAny.getJsonSchema())
-                .filter((schema) => !!schema)
+            anyOf: schemaList
         }
 
         if (this.subType[MetaRefSymbol]) {
