@@ -58,6 +58,7 @@ More Facts:
     - [INTEGER](#integer)
     - [BIGINT](#bigint)
     - [DATE](#date)
+    - [INSTANCE](#instance)
   - [Validation](#validation)
     - [Validators](#validators)
     - [Validation Methods](#validation-methods)
@@ -992,6 +993,47 @@ obj type is equal to
 */
 
 let someVar: DATE  // this is equal to `Date`
+
+```
+
+<br/>
+
+#### INSTANCE
+
+```ts
+import { INSTANCE } from 'metatyper' 
+
+class A {
+    a = 1
+}
+
+class B extends A {
+    b = 2
+}
+
+const obj = Meta({ 
+    someField: INSTANCE(A, {/*MetaTypeArgs*/})
+})
+/*
+obj type is equal to 
+{
+    someField: A
+}
+*/
+
+obj.someField = new A() // ok
+obj.someField = new B() // ok
+obj.someField = {} // type and validation error
+obj.someField = A // type and validation error
+
+const obj2 = Meta({
+    someField: INSTANCE(A, { allowChildren: false })
+})
+
+obj2.someField = new A() // ok
+obj2.someField = new B() // validation error
+
+let someVar: INSTANCE<A>  // this is equal to `A`
 
 ```
 

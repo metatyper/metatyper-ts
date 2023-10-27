@@ -25,6 +25,8 @@ import {
     ObjectImpl,
     LITERAL,
     LiteralImpl,
+    INSTANCE,
+    InstanceImpl,
     MetaType
 } from '../../../src/metatypes'
 
@@ -380,5 +382,26 @@ describe('MetaType and MetaTypeImpl', () => {
         expect(metaTypeImpl.getJsonSchema()).toEqual({
             const: 1
         })
+    })
+
+    test('INSTANCE', () => {
+        class Tst {
+            someField = 1
+        }
+
+        class TstChild extends Tst {}
+
+        const metaType = INSTANCE(Tst)
+        const metaTypeImpl = MetaType.getMetaImpl(metaType)
+
+        expect(MetaType.isMetaType(metaType)).toBe(true)
+        expect(InstanceImpl.isCompatible(Tst)).toBe(true) // since Tst can be an instance of some other class
+        expect(InstanceImpl.isCompatible(new Tst())).toBe(true)
+        expect(metaTypeImpl.isMetaTypeOf(new Tst())).toBe(true)
+        expect(metaTypeImpl.isMetaTypeOf(new TstChild())).toBe(true)
+        expect(metaTypeImpl.isMetaTypeOf(Tst)).toBe(false)
+        expect(metaTypeImpl.isMetaTypeOf(TstChild)).toBe(false)
+        expect(metaTypeImpl.isMetaTypeOf({})).toBe(false)
+        expect(metaTypeImpl.getJsonSchema()).toEqual(null)
     })
 })
