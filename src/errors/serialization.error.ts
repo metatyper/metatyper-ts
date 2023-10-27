@@ -4,6 +4,7 @@ import {
     SerializePlaceType,
     SerializerType
 } from '../metatypes'
+import { inspectMetaValue } from '../utils'
 import { MetaError } from './meta.error'
 
 export class MetaTypeSerializationError extends MetaError {
@@ -34,7 +35,9 @@ export class MetaTypeSerializationError extends MetaError {
     }) {
         const message = `MetaType serialization error {propName: ${
             propName || 'unknown'
-        }; value: ${value}; metaType: ${metaTypeImpl}; place: ${place}; serializer: ${
+        }; value: ${inspectMetaValue(
+            value
+        )}; metaType: ${metaTypeImpl}; place: ${place}; serializer: ${
             serializer['name'] || serializer.toString()
         }}
 `

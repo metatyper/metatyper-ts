@@ -1,4 +1,5 @@
 import { MetaTypeImpl, ValidatorType } from '../metatypes'
+import { inspectMetaValue } from '../utils'
 import { MetaError } from './meta.error'
 
 export class MetaTypeValidationError extends MetaError {
@@ -26,7 +27,7 @@ export class MetaTypeValidationError extends MetaError {
     }) {
         const message = `MetaType validation error {propName: ${
             propName || 'unknown'
-        }; value: ${value}; metaType: ${metaTypeImpl}; validator: ${
+        }; value: ${inspectMetaValue(value)}; metaType: ${metaTypeImpl}; validator: ${
             validator.name ||
             (validator.validate && validator.validate.toString()) ||
             validator.toString()
