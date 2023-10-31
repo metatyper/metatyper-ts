@@ -8,7 +8,7 @@
 ///////////////////////////////////////
 ///////////////////////////////////////
 
-export * from './meta'
+export * from './metaobjects'
 export * from './metatypes'
 export * from './validators'
 export * from './serializers'

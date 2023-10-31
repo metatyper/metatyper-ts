@@ -167,10 +167,6 @@ export function inspectMetaValue(
 ) {
     const checkIgnoredObjects = args?.checkIgnoredObjects
 
-    if (isNotPlainObject(value, args?.checkIgnoredObjects)) {
-        return `${value}`
-    }
-
     return objectDeepMap(
         value,
         (value) => {
@@ -280,5 +276,5 @@ export function prepareDeepSubTypes(obj: any, args?: MetaTypeArgs) {
     )
 }
 
-import { Meta } from '../meta'
+import { Meta } from '../metaobjects'
 import { MetaType, MetaTypeArgs, MetaTypeImpl } from '../metatypes'

@@ -1,6 +1,6 @@
 import Benchmark from 'benchmark'
 import { LITERAL, NUMBER, OBJECT, STRING } from '../../src'
-import { Meta } from '../../src/meta'
+import { Meta } from '../../src'
 
 class Parent1 {
     parent1 = 1

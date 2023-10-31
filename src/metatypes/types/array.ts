@@ -156,7 +156,6 @@ export type ARRAY<T> = MetaType<T, ArrayImpl>
  * const obj3 = Meta({ a: ARRAY(NUMBER()) }) // as { a : number[] }
  * obj3.a = [1]
  * // obj3.a = ['str'] -> type & validation error
- * // TODO: obj3.push('str') -> validation error or not
  * ```
  */
 export function ARRAY<T = any>(

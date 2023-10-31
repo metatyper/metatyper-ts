@@ -1,7 +1,6 @@
 import { describe, expect, test } from '@jest/globals'
 
-import { MetaType, MetaTypeImpl } from '../../../src/metatypes'
-import { MetaTypeValidationError } from '../../../src/errors'
+import { MetaType, MetaTypeImpl, MetaTypeValidationError } from '../../../src'
 
 describe('MetaType and MetaTypeImpl', () => {
     test('MetaType.isMetaType', () => {

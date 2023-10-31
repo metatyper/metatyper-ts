@@ -1,8 +1,6 @@
 import { describe, expect, test } from '@jest/globals'
 
-import { Meta } from '../../src/meta'
-import { MetaTypeValidationError } from '../../src/errors'
-import { NUMBER, STRING } from '../../src/metatypes'
+import { Meta, NUMBER, STRING, MetaTypeValidationError } from '../../src'
 
 describe('Meta objects', () => {
     test('MetaObject', () => {

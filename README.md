@@ -23,7 +23,7 @@ More Facts:
 - Works with native JavaScript.
 - Zero dependencies in JavaScript source code.
 - Rich error details. You can get all the information about your error.
-- It's tiny. Less than 10kb (minified + zipped).
+- It's tiny. Less than 16kb (minified + zipped).
 
 <br/>
 
@@ -170,9 +170,9 @@ const LowerStringValidator = {
 }
 
 @Meta.Class({
-    propsIgnore: [ 'someAnotherClassFlag' ],
+    ignoredProps: [ 'someAnotherClassFlag' ],
     instanceArgs: {
-        propsIgnore: [ 'someInstanceField' ]
+        ignoredProps: [ 'someInstanceField' ]
     }
 })
 class MyOldClass {
@@ -195,11 +195,11 @@ Object.assign(instance, {
     id: 2,
     username: 0, // ok, will cast to '0'
     stars: 'str', // validation error,
-    someInstanceField: '1' // ok, because the field in the propsIgnore
+    someInstanceField: '1' // ok, because the field in the ignoredProps
 })
 
 MyOldClass.someFlag = 'string' as any // validation error
-MyOldClass.someAnotherClassFlag = 'string' as any // ok, because the field in the propsIgnore
+MyOldClass.someAnotherClassFlag = 'string' as any // ok, because the field in the ignoredProps
 ```
 
 <br/>
@@ -311,6 +311,9 @@ type MetaArgs = {
 
     // MetaTypeArgs for configuring all Meta types
     metaTypesDefaultArgs?: MetaTypeArgs | ((metaTypeImpl: MetaTypeImpl) => MetaTypeArgs)
+
+    // Instance of a meta objects builder (contains meta objects functionality)
+    metaBuilder?: MetaObjectBuilder
 }
 ```
 
@@ -437,10 +440,11 @@ const obj = {
 const metaObj1 = Meta(obj)
 const metaObj2 = Meta(metaObj1)
 const metaObj3 = Meta.copy(metaObj1)
+const metaObj4 = Meta.copy(obj)
 
 console.log(Object.getPrototypeOf(metaObj1) === obj)
 console.log(Object.getPrototypeOf(metaObj2) === metaObj1)
-console.log(Object.getPrototypeOf(metaObj3) === obj)
+console.log(Object.getPrototypeOf(metaObj4) === Object.getPrototypeOf(obj))
 ```
 
 <br/>

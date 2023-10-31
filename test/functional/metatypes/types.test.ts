@@ -28,7 +28,7 @@ import {
     INSTANCE,
     InstanceImpl,
     MetaType
-} from '../../../src/metatypes'
+} from '../../../src'
 
 describe('MetaType and MetaTypeImpl', () => {
     test('NUMBER', () => {
