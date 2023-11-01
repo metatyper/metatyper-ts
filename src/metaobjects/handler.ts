@@ -95,6 +95,12 @@ export class MetaLogicHandler {
             })
         }
 
+        const doValidate = getDescriptorValue(targetObject, MetaObjectValidationIsActiveSymbol)
+
+        if (doValidate && declaration) {
+            declaration.validate(descriptor.value, { propName, targetObject })
+        }
+
         if (declaration) {
             declarations[propName] = declaration
         }
