@@ -9,7 +9,7 @@ import {
 import { MetaObjectBuilder } from './builder'
 import { MetaArgs } from './metaArgs'
 
-import { MetaType, MetaTypeFlag } from '../metatypes'
+import { MetaType, MetaTypeArgs, MetaTypeFlag, MetaTypeImpl } from '../metatypes'
 import { getDescriptorValue } from '../utils'
 import { MetaLogicHandler } from './handler'
 
@@ -53,11 +53,47 @@ Meta.Class = (args?: MetaArgs) => {
     }
 }
 
-Meta.declare = Meta.d = (metaType: MetaTypeFlag) => {
+Meta.declare = Meta.d = (metaTypeOrArgs?: MetaTypeFlag | MetaTypeArgs) => {
     return (target: object, propName: string) => {
+        let metaTypeImpl: MetaTypeImpl = null
+
+        if (MetaType.isMetaType(metaTypeOrArgs)) {
+            metaTypeImpl = MetaType.getMetaImpl(metaTypeOrArgs)
+        } else {
+            if (propName in target) {
+                metaTypeImpl = MetaTypeImpl.getMetaTypeImpl(target[propName], metaTypeOrArgs)
+            } else {
+                const reflectMetadataFunc = Reflect['getMetadata']
+
+                if (reflectMetadataFunc) {
+                    const typeConstructor = reflectMetadataFunc('design:type', target, propName)
+
+                    if (typeConstructor === Number) {
+                        metaTypeImpl = MetaTypeImpl.getMetaTypeImpl(1, metaTypeOrArgs)
+                    } else if (typeConstructor === String) {
+                        metaTypeImpl = MetaTypeImpl.getMetaTypeImpl('str', metaTypeOrArgs)
+                    } else if (typeConstructor === Boolean) {
+                        metaTypeImpl = MetaTypeImpl.getMetaTypeImpl(true, metaTypeOrArgs)
+                    } else if (typeConstructor === BigInt) {
+                        metaTypeImpl = MetaTypeImpl.getMetaTypeImpl(1n, metaTypeOrArgs)
+                    } else if (typeConstructor === Date) {
+                        metaTypeImpl = MetaTypeImpl.getMetaTypeImpl(new Date(), metaTypeOrArgs)
+                    } else if (typeConstructor === Array) {
+                        metaTypeImpl = MetaTypeImpl.getMetaTypeImpl([null], metaTypeOrArgs)
+                    } else if (typeConstructor === Object) {
+                        metaTypeImpl = MetaTypeImpl.getMetaTypeImpl(null, metaTypeOrArgs)
+                    } else {
+                        const fakeInstance = Object.create(typeConstructor.prototype)
+
+                        metaTypeImpl = MetaTypeImpl.getMetaTypeImpl(fakeInstance, metaTypeOrArgs)
+                    }
+                }
+            }
+        }
+
         target[MetaObjectInitialDeclarationsSymbol] = {
             ...(target[MetaObjectInitialDeclarationsSymbol] || {}),
-            [propName]: MetaType.getMetaImpl(metaType)
+            [propName]: metaTypeImpl || MetaTypeImpl.getMetaTypeImpl(null, metaTypeOrArgs)
         }
     }
 }
