@@ -82,6 +82,8 @@ Meta.declare = Meta.d = (metaTypeOrArgs?: MetaTypeFlag | MetaTypeArgs) => {
                         metaTypeImpl = MetaTypeImpl.getMetaTypeImpl([null], metaTypeOrArgs)
                     } else if (typeConstructor === Object) {
                         metaTypeImpl = MetaTypeImpl.getMetaTypeImpl(null, metaTypeOrArgs)
+                    } else if (!typeConstructor) {
+                        metaTypeImpl = null
                     } else {
                         const fakeInstance = Object.create(typeConstructor.prototype)
 
@@ -91,9 +93,11 @@ Meta.declare = Meta.d = (metaTypeOrArgs?: MetaTypeFlag | MetaTypeArgs) => {
             }
         }
 
-        target[MetaObjectInitialDeclarationsSymbol] = {
-            ...(target[MetaObjectInitialDeclarationsSymbol] || {}),
-            [propName]: metaTypeImpl || MetaTypeImpl.getMetaTypeImpl(null, metaTypeOrArgs)
+        if (metaTypeImpl) {
+            target[MetaObjectInitialDeclarationsSymbol] = {
+                ...(target[MetaObjectInitialDeclarationsSymbol] || {}),
+                [propName]: metaTypeImpl
+            }
         }
     }
 }
