@@ -17,8 +17,8 @@ export class InstanceImpl extends MetaTypeImpl {
             throw new TypeBuildError('subType must be an instance or class', InstanceImpl)
         }
 
-        // is it class or function
-        if (subType instanceof Function) {
+        // is it class
+        if (subType instanceof Function && subType.prototype) {
             return subType
         }
 
