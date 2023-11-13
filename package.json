@@ -59,8 +59,8 @@
         "test:jest": "jest",
         "test": "yarn lint && yarn test:types && yarn test:jest",
         "build": "rimraf ./lib && yarn build:tsc && yarn build:rollup",
-        "build:tsc": "rimraf ./lib && tsc --pretty --project ./tsconfig.build.json",
-        "build:rollup": "rimraf ./lib && rollup -c",
+        "build:tsc": "tsc --pretty --project ./tsconfig.build.json",
+        "build:rollup": "rollup -c",
         "benchmark": "ts-node test/benchmark/index.ts"
     },
     "devDependencies": {

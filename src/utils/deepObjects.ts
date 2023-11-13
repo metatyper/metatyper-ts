@@ -1,3 +1,6 @@
+import { IsMetaObjectSymbol } from '../metaobjects/symbols'
+import { MetaTypeArgs, MetaTypeImpl, IsMetaTypeSymbol } from '../metatypes'
+
 const DeepMapSourceRefSymbol = Symbol('DeepMapSourceRef')
 const DeepMapCircularRefSymbol = Symbol('DeepMapCircularRef')
 
@@ -5,11 +8,12 @@ export function isNotPlainObject(obj: any, checkFunc?: (value: any) => boolean) 
     if (!checkFunc) {
         checkFunc = (value: any) => {
             return (
-                Meta.isMetaObject(value) ||
-                MetaType.isMetaType(value) ||
-                value instanceof MetaTypeImpl ||
-                value instanceof Promise ||
-                value instanceof Function
+                value instanceof Object &&
+                (value[IsMetaObjectSymbol] ||
+                    value[IsMetaTypeSymbol] ||
+                    value instanceof MetaTypeImpl ||
+                    value instanceof Promise ||
+                    value instanceof Function)
             )
         }
     }
@@ -188,11 +192,11 @@ export function inspectMetaValue(
                 return `Date(${value.toISOString()})`
             }
 
-            if (MetaType.isMetaType(value)) {
+            if (value instanceof Object && value[IsMetaTypeSymbol]) {
                 return `${value}`
             }
 
-            if (Meta.isMetaObject(value)) {
+            if (value instanceof Object && value[IsMetaObjectSymbol]) {
                 return `${value}`
             }
 
@@ -275,6 +279,3 @@ export function prepareDeepSubTypes(obj: any, args?: MetaTypeArgs) {
         { disableDeepProcess: args?.disableDeepProcess }
     )
 }
-
-import { Meta } from '../metaobjects'
-import { MetaType, MetaTypeArgs, MetaTypeImpl } from '../metatypes'

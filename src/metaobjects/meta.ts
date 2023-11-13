@@ -102,9 +102,9 @@ Meta.declare = Meta.d = (metaTypeOrArgs?: MetaTypeFlag | MetaTypeArgs) => {
     }
 }
 
-Meta.isMetaObject = function isMetaObject(obj: any) {
+export const isMetaObject = (Meta.isMetaObject = function isMetaObject(obj: any) {
     return getDescriptorValue(obj, IsMetaObjectSymbol)
-}
+})
 
 Meta.validationIsActive = (obj: object) => {
     return getDescriptorValue(obj, MetaObjectValidationIsActiveSymbol) || false

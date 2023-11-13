@@ -1,6 +1,6 @@
 import { JSONSchema7 } from 'json-schema'
 
-import { StaticClass } from '../utils'
+import { StaticClass } from '../utils/classes'
 import { MetaTypeSerializationError, MetaTypeValidationError } from '../errors'
 
 import { MetaTypeValidator, NullableValidator } from '../validators'
@@ -457,7 +457,7 @@ export class MetaTypeImpl {
         }
 
         if (!maxCompatibilityScoreTypeImplCls) {
-            maxCompatibilityScoreTypeImplCls = AnyImpl
+            return null
         }
 
         if (args instanceof Function) {
@@ -481,4 +481,3 @@ export class MetaTypeImpl {
 }
 
 import { MetaType } from './metatype'
-import { AnyImpl } from './types/any'

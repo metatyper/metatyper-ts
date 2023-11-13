@@ -1,8 +1,6 @@
 import { MetaType } from '../metatype'
 import { MetaTypeImpl, MetaTypeArgs } from '../metatypeImpl'
 
-// getMetaType will find ANY if there is no other metatype
-MetaTypeImpl.registerMetaType
 export class AnyImpl extends MetaTypeImpl {
     name = 'ANY'
 

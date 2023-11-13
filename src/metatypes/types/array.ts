@@ -113,6 +113,8 @@ export class ArrayImpl extends MetaTypeImpl {
     }
 
     castToType({ value, ...args }) {
+        // TODO: array-like
+
         return value?.map((item: any) =>
             this.subType.castToType({ ...args, value: item, metaTypeImpl: this.subType })
         )
@@ -160,15 +162,15 @@ export type ARRAY<T> = MetaType<T, ArrayImpl>
  */
 export function ARRAY<T = any>(
     subType?: T[],
-    args?: MetaTypeArgs<ARRAY<T>> & ArrayMetaTypeArgs
+    args?: MetaTypeArgs<ARRAY<T[]>> & ArrayMetaTypeArgs
 ): ARRAY<T[]>
 export function ARRAY<T = any>(
     subType?: () => T[],
-    args?: MetaTypeArgs<ARRAY<T>> & ArrayMetaTypeArgs
+    args?: MetaTypeArgs<ARRAY<T[]>> & ArrayMetaTypeArgs
 ): ARRAY<T[]>
 export function ARRAY<T = any>(
     subType?: T,
-    args?: MetaTypeArgs<ARRAY<T>> & ArrayMetaTypeArgs
+    args?: MetaTypeArgs<ARRAY<T[]>> & ArrayMetaTypeArgs
 ): ARRAY<T[]>
 export function ARRAY(subType?: any, args?: any) {
     if (subType instanceof Function) subType = subType()
