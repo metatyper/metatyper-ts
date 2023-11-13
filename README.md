@@ -74,7 +74,6 @@ More Facts:
     - [TypeBuildError](#typebuilderror)
 - [Similar libraries](#similar-libraries)
 - [Changelog](#changelog)
-- [ToDo](#todo)
 
 <br/>
 
@@ -1445,7 +1444,3 @@ These libs are worth a look:
 View the changelog at [CHANGELOG.md](CHANGELOG.md)
 
 <br/>
-
-## ToDo
-
-View the todo list at [TODO.md](TODO.md)
